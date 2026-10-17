@@ -1,6 +1,6 @@
 # Claude Profile Switcher: Plan
 
-Tray/menu bar app (macOS + Windows) untuk launch Claude Desktop dengan akun berbeda. Satu profile = satu data directory terpisah.
+Menu bar app macOS (native Swift) untuk launch Claude Desktop dengan akun berbeda. Satu profile = satu data directory terpisah.
 
 ## Cara link akun Claude ke Claude Desktop
 
@@ -14,11 +14,11 @@ Tidak ada link di level app kita. Switcher tidak menyentuh credential sama sekal
 Jadi "akun" cuma efek samping dari folder mana yang dipakai. Yang kita simpan hanya: id, nama, path folder.
 
 [FACT] Claude Desktop di Mac ini adalah Electron (ada `Electron Framework.framework`) dan data dir `~/Library/Application Support/Claude` berisi `Cookies`, `Local Storage`, `Session Storage`, dll.
-[ASSUMPTION] Flag `--user-data-dir` dihormati oleh Claude Desktop. Belum dites. Ini Phase 0.
+[FACT] Flag `--user-data-dir` dihormati oleh Claude Desktop di macOS (dites di Phase 0).
 
 ## Fitur
 
-- Tray icon (menu bar Mac, system tray Windows). Tidak ada window utama, tidak ada Dock icon.
+- Tray icon (menu bar Mac; Windows di repo terpisah nanti). Tidak ada window utama, tidak ada Dock icon.
 - Klik tray: popup berisi list profile.
 - Klik profile: launch Claude Desktop dengan profile itu.
 - Tombol "+": tambah profile, isi nama.
@@ -27,7 +27,7 @@ Jadi "akun" cuma efek samping dari folder mana yang dipakai. Yang kita simpan ha
 
 ## Data model
 
-`profiles.json` di app config dir (`app_config_dir` dari Tauri):
+`profiles.json` di app config dir (`~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`):
 
 ```json
 [{ "id": "a1b2c3", "name": "Kerja" }, { "id": "d4e5f6", "name": "Pribadi" }]
@@ -41,7 +41,7 @@ Jadi "akun" cuma efek samping dari folder mana yang dipakai. Yang kita simpan ha
 - macOS: `open -n -a Claude --args --user-data-dir=<folder>`
 - Windows: jalankan `Claude.exe --user-data-dir=<folder>`. Lokasi exe harus ditemukan (lihat Risiko).
 - Beberapa profile bisa jalan bersamaan (terbukti di Phase 0).
-- `open -n` untuk profile yang sudah jalan membuat proses Claude baru yang tetap hidup dengan data dir yang sama (terbukti di Phase 0). Dua proses di satu data dir berisiko merusak data. App harus cek dulu apakah profile sudah jalan (cari proses dengan `--user-data-dir=<folder>`) dan hanya mem-fokuskan window-nya, bukan launch lagi. Cara fokus per pid (misal AppleScript via System Events) belum dites.
+- `open -n` untuk profile yang sudah jalan membuat proses Claude baru yang tetap hidup dengan data dir yang sama (terbukti di Phase 0). Dua proses di satu data dir berisiko merusak data. App harus cek dulu apakah profile sudah jalan (cari proses dengan `--user-data-dir=<folder>`) dan hanya mem-fokuskan window-nya, bukan launch lagi. Fokus per pid lewat NSRunningApplication belum dites manual.
 
 ## Hapus profile
 
@@ -51,32 +51,25 @@ Dua langkah, dengan konfirmasi:
 
 ## Stack
 
-Tauri 2 (Rust core + web UI). Alasan: tray + popup window bawaan, satu codebase untuk Mac dan Windows, binary kecil, UI pakai React/TS (cocok dengan arah frontend kamu).
-Alternatif ditolak: Electron (berat untuk app sekecil ini), Swift + C# dua codebase (dua kali kerja).
+Native Swift, SwiftUI `MenuBarExtra` (style window), SwiftPM tanpa Xcode project. `build.sh` membangun `build/Claude Profiles.app` dengan `LSUIElement` (tanpa Dock icon) dan ad-hoc codesign.
+Keputusan 2026-10-17: fokus macOS dulu karena urgent. Windows dibuat di repo terpisah nanti. Tauri dan Flutter dipertimbangkan, tidak dipakai. Scaffold Tauri dibuang (tidak pernah di-commit).
 
-Struktur minimal:
-- `src-tauri/`: tray, window popup, commands `list/add/rename/delete/launch`, baca-tulis `profiles.json`.
-- `src/`: satu komponen React: list + form tambah + mode manage.
+Struktur:
+- `Sources/ClaudeProfiles/Store.swift`: model profile, `profiles.json`, deteksi proses jalan (`ps`), launch/fokus, hapus aman.
+- `Sources/ClaudeProfiles/ContentView.swift`: popup: list, tambah, mode manage (rename, hapus dengan konfirmasi).
+- `Sources/ClaudeProfiles/App.swift`: `MenuBarExtra`.
 
-## Phase
+## Status
 
-0. Spike manual (30 menit, sebelum nulis app). Hasil Mac, 2026-10-17:
-   - Terbukti: flag `--user-data-dir` jalan; folder baru mulai kosong dan menampilkan login; akun kedua bisa login terpisah (dikonfirmasi user).
-   - Terbukti: `claude_desktop_config.json` per folder, jadi config MCP per profile dan profile baru mulai tanpa MCP server.
-   - Terbukti: relaunch profile yang sedang jalan membuat proses ganda (lihat bagian Launch).
-   - Terbukti (dikonfirmasi user): akun asli tetap login saat profile kedua login; profile kedua tetap login setelah ditutup dan dibuka lagi dengan perintah yang sama, dan prompt berjalan normal.
-   - Belum dites: Windows.
-   Daftar tes semula:
-   - Jalankan perintah `open -n` dengan folder baru. Login akun kedua. Cek akun pertama tetap login.
-   - Jalankan dua profile bersamaan. Cek klik ulang profile yang sudah jalan.
-   - Cek apakah `claude_desktop_config.json` (MCP) ikut pindah ke folder baru atau tetap global.
-   - Ulangi di Windows, termasuk cara menemukan exe.
-   - Kalau flag tidak jalan, plan ini gugur. Berhenti di sini.
-1. Scaffold Tauri 2, tray icon, popup muncul di bawah icon, hide saat kehilangan fokus.
-2. Data layer: `profiles.json`, command add/rename/delete.
-3. Launch per OS. Test di Mac dulu, lalu Windows.
-4. UI: list, form tambah, mode manage, konfirmasi hapus.
-5. Packaging: `.dmg` (signing + notarization kalau mau dibagikan) dan installer Windows.
+- Phase 0 (spike macOS): selesai, lihat hasil di bawah. Windows belum dites.
+- Phase 1-4 versi macOS: kode pertama sudah ada dan ter-build. Launch/fokus, tambah, rename, hapus sudah ditulis. Belum diuji manual oleh user: klik tray, popup, launch profile, fokus profile yang jalan, rename, hapus.
+- Belum: icon custom, auto-start saat login, signing + notarization untuk dibagikan.
+
+Hasil Phase 0 macOS, 2026-10-17:
+- Terbukti: flag `--user-data-dir` jalan; folder baru mulai kosong dan menampilkan login; akun kedua login terpisah; akun asli tetap login; sesi bertahan setelah ditutup dan dibuka lagi; chat berjalan normal.
+- Terbukti: `claude_desktop_config.json` per folder, jadi config MCP per profile dan profile baru mulai tanpa MCP server.
+- Terbukti: relaunch profile yang sedang jalan membuat proses ganda, jadi app cek dulu dan hanya fokus (`NSRunningApplication.activate`, belum diuji).
+- Belum dites: Windows (lokasi exe, MSIX), keluar-masuk popup saat banyak profile.
 
 Tidak termasuk (tambah kalau butuh): wrapper `.app` per profile dengan Dock icon sendiri, indikator profile aktif, auto-start saat login, import history.
 

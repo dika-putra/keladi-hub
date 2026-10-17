@@ -1,0 +1,122 @@
+import AppKit
+import Foundation
+
+struct Profile: Codable, Identifiable, Equatable {
+    let id: String
+    var name: String
+}
+
+private let claudeBundleID = "com.anthropic.claudefordesktop"
+private let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+
+final class Store: ObservableObject {
+    static let defaultProfile = Profile(id: "default", name: "Default")
+
+    @Published private(set) var profiles: [Profile] = []
+    @Published private(set) var runningPIDs: [String: pid_t] = [:]
+
+    private let configDir = appSupport.appendingPathComponent("ClaudeProfileSwitcher")
+    private var configFile: URL { configDir.appendingPathComponent("profiles.json") }
+
+    init() {
+        load()
+        refreshRunning()
+    }
+
+    var all: [Profile] { [Store.defaultProfile] + profiles }
+
+    // Default profile uses Claude's own data dir (no flag), so existing login is kept.
+    // Other profiles use Claude-<id>; the id (not the name) names the folder so rename never moves data.
+    func dataDir(_ p: Profile) -> URL {
+        p.id == Store.defaultProfile.id
+            ? appSupport.appendingPathComponent("Claude")
+            : appSupport.appendingPathComponent("Claude-\(p.id)")
+    }
+
+    func add(name: String) {
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { return }
+        profiles.append(Profile(id: String(UUID().uuidString.prefix(8)).lowercased(), name: n))
+        save()
+    }
+
+    func rename(_ p: Profile, to name: String) {
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty, let i = profiles.firstIndex(of: p) else { return }
+        profiles[i].name = n
+        save()
+    }
+
+    func remove(_ p: Profile, deleteData: Bool) {
+        guard p.id != Store.defaultProfile.id, let i = profiles.firstIndex(of: p) else { return }
+        if deleteData, runningPIDs[p.id] == nil {
+            let dir = dataDir(p)
+            // Only ever delete Claude-<id> directly under Application Support.
+            if dir.deletingLastPathComponent() == appSupport, dir.lastPathComponent == "Claude-\(p.id)" {
+                try? FileManager.default.removeItem(at: dir)
+            }
+        }
+        profiles.remove(at: i)
+        save()
+    }
+
+    // Main Claude processes only (not Helpers). Matches by --user-data-dir flag.
+    func refreshRunning() {
+        let out = run("/bin/ps", ["-axo", "pid=,command="])
+        var found: [String: pid_t] = [:]
+        for line in out.split(separator: "\n") {
+            let parts = line.trimmingCharacters(in: .whitespaces).split(separator: " ", maxSplits: 1)
+            guard parts.count == 2, let pid = pid_t(parts[0]) else { continue }
+            let cmd = String(parts[1])
+            guard cmd.contains("Claude.app/Contents/MacOS/Claude") else { continue }
+            if let r = cmd.range(of: "--user-data-dir=") {
+                let dir = String(cmd[r.upperBound...])
+                if let p = profiles.first(where: { dataDir($0).path == dir }) { found[p.id] = found[p.id] ?? pid }
+            } else if cmd.hasSuffix("Claude.app/Contents/MacOS/Claude") {
+                found[Store.defaultProfile.id] = found[Store.defaultProfile.id] ?? pid
+            }
+        }
+        runningPIDs = found
+    }
+
+    // Running profile: focus it. Launching again would start a second process on the same data dir.
+    func launch(_ p: Profile) {
+        refreshRunning()
+        if let pid = runningPIDs[p.id] {
+            NSRunningApplication(processIdentifier: pid)?.activate()
+            return
+        }
+        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: claudeBundleID) else { return }
+        let cfg = NSWorkspace.OpenConfiguration()
+        if p.id != Store.defaultProfile.id {
+            cfg.createsNewApplicationInstance = true
+            cfg.arguments = ["--user-data-dir=\(dataDir(p).path)"]
+        }
+        NSWorkspace.shared.openApplication(at: appURL, configuration: cfg) { _, _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self.refreshRunning() }
+        }
+    }
+
+    private func load() {
+        guard let data = try? Data(contentsOf: configFile),
+              let list = try? JSONDecoder().decode([Profile].self, from: data) else { return }
+        profiles = list
+    }
+
+    private func save() {
+        try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(profiles) { try? data.write(to: configFile) }
+    }
+
+    private func run(_ path: String, _ args: [String]) -> String {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: path)
+        p.arguments = args
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        try? p.run()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return String(decoding: data, as: UTF8.self)
+    }
+}
