@@ -21,5 +21,6 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
-codesign --force --sign - "$APP"
+# SIGN_ID=<codesigning identity> keeps the same signature across builds, so the Accessibility permission survives rebuilds.
+codesign --force --sign "${SIGN_ID:--}" "$APP"
 echo "Built $APP"

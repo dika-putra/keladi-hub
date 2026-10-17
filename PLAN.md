@@ -62,6 +62,15 @@ Restore manual (terbukti 2026-10-17 untuk `claude-code-sessions` dan `git-worktr
 Risiko yang tersisa untuk sesi di scratch workspace: file sesi menyimpan `cwd` absolut yang menunjuk ke folder profile lama (contoh `.../Claude/scratch-workspaces/...`) dan id akun, jadi sesi di scratch workspace mungkin tidak bisa dibuka. Transkrip asli tetap bisa dibuka lewat `claude --resume` karena ada di `~/.claude/projects`.
 Backup tidak dibersihkan otomatis. Hapus manual kalau tidak dibutuhkan.
 
+## Set as default
+
+Default = akun yang terbuka kalau Claude dibuka dari Spotlight atau Dock = isi folder `Claude`. Memindahkannya berarti menukar folder: `Claude` -> `Claude-swap-tmp`, `Claude-<id>` -> `Claude`, `Claude-swap-tmp` -> `Claude-<id>`, lalu menukar nama kedua profile supaya nama tetap mengikuti akunnya. Rollback kalau satu langkah gagal. Ditolak kalau ada Claude yang jalan, atau profile target belum pernah dibuka (foldernya belum ada).
+Belum diuji. Risiko: sesi Code di scratch workspace menyimpan path absolut ke folder lama.
+
+## Catatan 2026-10-17: build dihapus macOS
+
+Percobaan memulihkan window yang diminimize lewat Accessibility API (`AXUIElement`), dengan tanda tangan Apple Development, berakhir dengan `.app` dihapus macOS karena terdeteksi malware. Nama deteksi dan penyebab pasti tidak diketahui (log sistem tidak mencatat alasannya). Kode Accessibility dan log `/tmp` dibuang, tanda tangan kembali ad-hoc. Pemulihan window yang diminimize belum ada. Kalau dicoba lagi, minta izin sekali dan jangan pakai build yang sama dengan yang dihapus.
+
 ## Stack
 
 Native Swift, SwiftUI `MenuBarExtra` (style window), SwiftPM tanpa Xcode project. `build.sh` membangun `build/Claude Profiles.app` dengan `LSUIElement` (tanpa Dock icon) dan ad-hoc codesign.

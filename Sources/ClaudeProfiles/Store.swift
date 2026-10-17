@@ -78,6 +78,37 @@ final class Store: ObservableObject {
         save()
     }
 
+    // Swaps the data folders of the default profile and p, then swaps their names so each name keeps its account.
+    // Three renames with rollback; refuses while any Claude process runs. Returns an error message, or nil on success.
+    func makeDefault(_ p: Profile) -> String? {
+        refreshRunning()
+        guard p.id != Store.defaultProfile.id, let i = profiles.firstIndex(where: { $0.id == p.id }) else {
+            return "This profile is already the default."
+        }
+        guard runningPIDs.isEmpty else { return "Close all Claude windows first." }
+        let fm = FileManager.default
+        let a = dataDir(Store.defaultProfile)
+        let b = dataDir(p)
+        let tmp = appSupport.appendingPathComponent("Claude-swap-tmp")
+        guard fm.fileExists(atPath: b.path) else { return "Open and log in to this profile once first." }
+        guard !fm.fileExists(atPath: tmp.path) else { return "Remove the leftover folder Claude-swap-tmp first." }
+        var done: [(from: URL, to: URL)] = []
+        do {
+            for (from, to) in [(a, tmp), (b, a), (tmp, b)] {
+                try fm.moveItem(at: from, to: to)
+                done.append((from, to))
+            }
+        } catch {
+            for step in done.reversed() { try? fm.moveItem(at: step.to, to: step.from) }
+            return "Swap failed and was rolled back: \(error.localizedDescription)"
+        }
+        let old = defaultName
+        defaultName = profiles[i].name
+        profiles[i].name = old
+        save()
+        return nil
+    }
+
     // Copies Code-session history to Backups/<name>-<id>-<timestamp> before a profile's data is deleted.
     private func backupHistory(of p: Profile) -> Bool {
         let fm = FileManager.default

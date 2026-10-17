@@ -8,6 +8,8 @@ struct ContentView: View {
     @State private var renaming: Profile?
     @State private var renameText = ""
     @State private var removing: Profile?
+    @State private var makingDefault: Profile?
+    @State private var errorMessage: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -30,6 +32,22 @@ struct ContentView: View {
                         Button("Cancel") { removing = nil }
                     }
                 }
+            } else if let p = makingDefault {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Make \(p.name) the default?").font(.headline)
+                    if let msg = errorMessage {
+                        Text(msg).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                        Button("OK") { makingDefault = nil; errorMessage = nil }
+                    } else {
+                        Text("Claude opened from Spotlight or the Dock will open this account. The two profiles swap data folders. Close all Claude windows first.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        Button("Make default") {
+                            errorMessage = store.makeDefault(p)
+                            if errorMessage == nil { makingDefault = nil }
+                        }
+                        Button("Cancel") { makingDefault = nil }
+                    }
+                }
             } else if adding {
                 HStack {
                     TextField("Profile name", text: $newName).onSubmit(commitAdd)
@@ -48,7 +66,7 @@ struct ContentView: View {
         .buttonStyle(.borderless)
         .padding(12)
         .frame(width: 280)
-        .background(PopupAnchor(trigger: "\(store.all.count)-\(managing)-\(adding)-\(removing?.id ?? "")-\(store.runningPIDs.count)"))
+        .background(PopupAnchor(trigger: "\(store.all.count)-\(managing)-\(adding)-\(removing?.id ?? "")-\(makingDefault?.id ?? "")-\(errorMessage ?? "")-\(store.runningPIDs.count)"))
         .onAppear { store.refreshRunning() }
     }
 
@@ -71,6 +89,12 @@ struct ContentView: View {
                 }
                 Button { renaming = p; renameText = p.name } label: { Image(systemName: "pencil") }
                 if !isDefault {
+                    Button {
+                        store.refreshRunning()
+                        errorMessage = store.runningPIDs.isEmpty ? nil : "Claude is still open. Close all Claude windows first, then make this profile the default."
+                        makingDefault = p
+                    } label: { Image(systemName: "star") }
+                        .help("Make default")
                     Button { store.refreshRunning(); removing = p } label: { Image(systemName: "trash") }
                 }
             }
