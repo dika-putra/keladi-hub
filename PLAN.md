@@ -45,9 +45,22 @@ Jadi "akun" cuma efek samping dari folder mana yang dipakai. Yang kita simpan ha
 
 ## Hapus profile
 
-Dua langkah, dengan konfirmasi:
-1. Hapus dari list (selalu).
-2. Opsi "hapus juga data login/chat di folder" (permanen, default off, konfirmasi eksplisit).
+Satu aksi: "Remove and delete all local data", dengan penjelasan di panel konfirmasi (tanpa dialog sistem, karena dialog menutup popup menu bar). Opsi "keep data" dibuang karena folder yatim tidak bisa dipasang lagi ke profile baru (id baru berarti folder baru).
+- Ditolak selama Claude profile itu masih jalan (panel menampilkan peringatan).
+- Hanya menghapus folder `Claude-<id>` tepat di bawah `~/Library/Application Support`. Profile default tidak bisa dihapus.
+- Isi yang terhapus: login (Cookies, Local Storage), config MCP, cache, daftar sesi Code, scratch workspace.
+- Tidak terhapus: chat di claude.ai (di akun Anthropic), transkrip Code di `~/.claude/projects` (dipakai bersama semua profile), repo di disk.
+
+### Backup histori Code sebelum hapus
+
+Sebelum folder dihapus, app menyalin ke folder tersembunyi:
+`~/Library/Application Support/ClaudeProfileSwitcher/Backups/<nama>-<id>-<yyyyMMdd-HHmmss>/`
+Isi backup: `claude-code-sessions/`, `scratch-workspaces/`, `git-worktrees.json` (yang ada saja). Kalau penyalinan gagal, profile dan datanya tidak dihapus.
+Folder `Library` tersembunyi di Finder: buka lewat Go > Go to Folder, atau `open ~/Library/Application\ Support/ClaudeProfileSwitcher/Backups`.
+
+Restore manual (terbukti 2026-10-17 untuk `claude-code-sessions` dan `git-worktrees.json`: sesi Code lama muncul lagi di profile baru; `scratch-workspaces` belum diuji): tambah profile baru, buka sekali lalu tutup supaya foldernya terbentuk, salin isi backup ke `~/Library/Application Support/Claude-<id baru>/`, buka lagi.
+Risiko yang tersisa untuk sesi di scratch workspace: file sesi menyimpan `cwd` absolut yang menunjuk ke folder profile lama (contoh `.../Claude/scratch-workspaces/...`) dan id akun, jadi sesi di scratch workspace mungkin tidak bisa dibuka. Transkrip asli tetap bisa dibuka lewat `claude --resume` karena ada di `~/.claude/projects`.
+Backup tidak dibersihkan otomatis. Hapus manual kalau tidak dibutuhkan.
 
 ## Stack
 

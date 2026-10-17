@@ -13,7 +13,24 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(store.all) { p in row(p) }
             Divider().padding(.vertical, 4)
-            if adding {
+            if let p = removing {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Remove \(p.name)?").font(.headline)
+                    if store.runningPIDs[p.id] != nil {
+                        Text("Claude is still open with this profile. Close that Claude window first, then remove it.")
+                            .font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("OK") { removing = nil }
+                    } else {
+                        Text("Deletes this profile's login, MCP config and cache. Code session history is copied to ~/Library/Application Support/ClaudeProfileSwitcher/Backups first. Chats on claude.ai are not affected.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Remove and delete all local data") { store.remove(p, deleteData: true); removing = nil }
+                            .foregroundStyle(.red)
+                        Button("Cancel") { removing = nil }
+                    }
+                }
+            } else if adding {
                 HStack {
                     TextField("Profile name", text: $newName).onSubmit(commitAdd)
                     Button("Add", action: commitAdd)
@@ -23,7 +40,7 @@ struct ContentView: View {
                 HStack {
                     Button("+ Add profile") { adding = true }
                     Spacer()
-                    Button(managing ? "Done" : "Manage") { managing.toggle() }
+                    Button(managing ? "Done" : "Manage") { finishManage() }
                     Button("Quit") { NSApplication.shared.terminate(nil) }
                 }
             }
@@ -31,42 +48,85 @@ struct ContentView: View {
         .buttonStyle(.borderless)
         .padding(12)
         .frame(width: 280)
+        .background(PopupAnchor(trigger: "\(store.all.count)-\(managing)-\(adding)-\(removing?.id ?? "")-\(store.runningPIDs.count)"))
         .onAppear { store.refreshRunning() }
-        .confirmationDialog(
-            "Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })
-        ) {
-            Button("Remove profile (keep data)") { if let p = removing { store.remove(p, deleteData: false) } }
-            Button("Remove and delete login/chat data", role: .destructive) {
-                if let p = removing { store.remove(p, deleteData: true) }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
     }
 
+    // Launching is only possible outside Manage mode, so rename/remove never share a row with an "open" tap target.
     @ViewBuilder
     private func row(_ p: Profile) -> some View {
         let isDefault = p.id == Store.defaultProfile.id
-        HStack {
-            Circle().fill(store.runningPIDs[p.id] != nil ? .green : .clear).frame(width: 7, height: 7)
-            if renaming == p {
-                TextField("Name", text: $renameText).onSubmit {
-                    store.rename(p, to: renameText)
-                    renaming = nil
+        let running = store.runningPIDs[p.id] != nil
+        let title = isDefault ? "\(p.name) (default)" : p.name
+        if managing {
+            HStack {
+                RunningDot(running: running)
+                if renaming == p {
+                    TextField("Name", text: $renameText).onSubmit {
+                        store.rename(p, to: renameText)
+                        renaming = nil
+                    }
+                } else {
+                    Text(title).frame(maxWidth: .infinity, alignment: .leading)
                 }
-            } else {
-                Button(isDefault ? "\(p.name) (default)" : p.name) { store.launch(p) }.frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if managing {
                 Button { renaming = p; renameText = p.name } label: { Image(systemName: "pencil") }
-                if !isDefault { Button { removing = p } label: { Image(systemName: "trash") } }
+                if !isDefault {
+                    Button { store.refreshRunning(); removing = p } label: { Image(systemName: "trash") }
+                }
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+        } else {
+            LaunchRow(title: title, running: running, actionLabel: running ? "Show" : (store.needsLogin(p) ? "Login" : "Open")) {
+                store.launch(p)
+                NSApp.keyWindow?.close()
             }
         }
-        .padding(.vertical, 3)
+    }
+
+    private func finishManage() {
+        if managing, let p = renaming { store.rename(p, to: renameText) }
+        renaming = nil
+        managing.toggle()
     }
 
     private func commitAdd() {
         store.add(name: newName)
         newName = ""
         adding = false
+    }
+}
+
+private struct RunningDot: View {
+    let running: Bool
+    var body: some View {
+        Circle().fill(running ? Color.green : Color.clear).frame(width: 7, height: 7)
+    }
+}
+
+private struct LaunchRow: View {
+    let title: String
+    let running: Bool
+    let actionLabel: String
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                RunningDot(running: running)
+                Text(title)
+                Spacer()
+                Text(actionLabel).font(.caption).foregroundStyle(.secondary)
+                Image(systemName: "arrow.up.forward.app").foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(hovering ? 0.12 : 0.05)))
+            .contentShape(Rectangle())
+        }
+        .help("Open Claude with this profile")
+        .onHover { hovering = $0 }
     }
 }

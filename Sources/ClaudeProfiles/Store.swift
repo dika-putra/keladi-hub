@@ -39,6 +39,11 @@ final class Store: ObservableObject {
             : appSupport.appendingPathComponent("Claude-\(p.id)")
     }
 
+    // A profile's folder only exists after Claude was launched with it once, so no folder means "not logged in yet".
+    func needsLogin(_ p: Profile) -> Bool {
+        p.id != Store.defaultProfile.id && !FileManager.default.fileExists(atPath: dataDir(p).path)
+    }
+
     func add(name: String) {
         let n = name.trimmingCharacters(in: .whitespaces)
         guard !n.isEmpty else { return }
@@ -59,10 +64,13 @@ final class Store: ObservableObject {
 
     func remove(_ p: Profile, deleteData: Bool) {
         guard p.id != Store.defaultProfile.id, let i = profiles.firstIndex(of: p) else { return }
+        refreshRunning()
         if deleteData, runningPIDs[p.id] == nil {
             let dir = dataDir(p)
             // Only ever delete Claude-<id> directly under Application Support.
-            if dir.deletingLastPathComponent() == appSupport, dir.lastPathComponent == "Claude-\(p.id)" {
+            if dir.deletingLastPathComponent().path == appSupport.path, dir.lastPathComponent == "Claude-\(p.id)" {
+                // Keep the profile and its data if the backup fails.
+                guard backupHistory(of: p) else { return }
                 try? FileManager.default.removeItem(at: dir)
             }
         }
@@ -70,8 +78,29 @@ final class Store: ObservableObject {
         save()
     }
 
+    // Copies Code-session history to Backups/<name>-<id>-<timestamp> before a profile's data is deleted.
+    private func backupHistory(of p: Profile) -> Bool {
+        let fm = FileManager.default
+        let src = dataDir(p)
+        let items = ["claude-code-sessions", "scratch-workspaces", "git-worktrees.json"]
+            .filter { fm.fileExists(atPath: src.appendingPathComponent($0).path) }
+        if items.isEmpty { return true }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyyMMdd-HHmmss"
+        let label = p.name.filter { $0.isLetter || $0.isNumber }
+        let dest = configDir.appendingPathComponent("Backups/\(label)-\(p.id)-\(fmt.string(from: Date()))")
+        do {
+            try fm.createDirectory(at: dest, withIntermediateDirectories: true)
+            for item in items { try fm.copyItem(at: src.appendingPathComponent(item), to: dest.appendingPathComponent(item)) }
+            return true
+        } catch {
+            return false
+        }
+    }
+
     // Main Claude processes only (not Helpers). Matches by --user-data-dir flag.
     func refreshRunning() {
+        objectWillChange.send()
         let out = run("/bin/ps", ["-axo", "pid=,command="])
         var found: [String: pid_t] = [:]
         for line in out.split(separator: "\n") {
