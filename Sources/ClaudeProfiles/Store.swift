@@ -6,12 +6,18 @@ struct Profile: Codable, Identifiable, Equatable {
     var name: String
 }
 
+private struct Config: Codable {
+    var defaultName: String
+    var profiles: [Profile]
+}
+
 private let claudeBundleID = "com.anthropic.claudefordesktop"
 private let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
 
 final class Store: ObservableObject {
     static let defaultProfile = Profile(id: "default", name: "Default")
 
+    @Published private(set) var defaultName = "Evermos"
     @Published private(set) var profiles: [Profile] = []
     @Published private(set) var runningPIDs: [String: pid_t] = [:]
 
@@ -23,7 +29,7 @@ final class Store: ObservableObject {
         refreshRunning()
     }
 
-    var all: [Profile] { [Store.defaultProfile] + profiles }
+    var all: [Profile] { [Profile(id: Store.defaultProfile.id, name: defaultName)] + profiles }
 
     // Default profile uses Claude's own data dir (no flag), so existing login is kept.
     // Other profiles use Claude-<id>; the id (not the name) names the folder so rename never moves data.
@@ -42,8 +48,12 @@ final class Store: ObservableObject {
 
     func rename(_ p: Profile, to name: String) {
         let n = name.trimmingCharacters(in: .whitespaces)
-        guard !n.isEmpty, let i = profiles.firstIndex(of: p) else { return }
-        profiles[i].name = n
+        guard !n.isEmpty else { return }
+        if p.id == Store.defaultProfile.id {
+            defaultName = n
+        } else if let i = profiles.firstIndex(where: { $0.id == p.id }) {
+            profiles[i].name = n
+        }
         save()
     }
 
@@ -98,14 +108,20 @@ final class Store: ObservableObject {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: configFile),
-              let list = try? JSONDecoder().decode([Profile].self, from: data) else { return }
-        profiles = list
+        guard let data = try? Data(contentsOf: configFile) else { return }
+        if let cfg = try? JSONDecoder().decode(Config.self, from: data) {
+            defaultName = cfg.defaultName
+            profiles = cfg.profiles
+        } else if let list = try? JSONDecoder().decode([Profile].self, from: data) {
+            profiles = list  // first-version format: plain array
+        }
     }
 
     private func save() {
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
-        if let data = try? JSONEncoder().encode(profiles) { try? data.write(to: configFile) }
+        if let data = try? JSONEncoder().encode(Config(defaultName: defaultName, profiles: profiles)) {
+            try? data.write(to: configFile)
+        }
     }
 
     private func run(_ path: String, _ args: [String]) -> String {

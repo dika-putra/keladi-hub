@@ -54,11 +54,11 @@ struct ContentView: View {
                     renaming = nil
                 }
             } else {
-                Button(p.name) { store.launch(p) }.frame(maxWidth: .infinity, alignment: .leading)
+                Button(isDefault ? "\(p.name) (default)" : p.name) { store.launch(p) }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            if managing && !isDefault {
+            if managing {
                 Button { renaming = p; renameText = p.name } label: { Image(systemName: "pencil") }
-                Button { removing = p } label: { Image(systemName: "trash") }
+                if !isDefault { Button { removing = p } label: { Image(systemName: "trash") } }
             }
         }
         .padding(.vertical, 3)
