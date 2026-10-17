@@ -64,7 +64,7 @@ Struktur minimal:
    - Terbukti: flag `--user-data-dir` jalan; folder baru mulai kosong dan menampilkan login; akun kedua bisa login terpisah (dikonfirmasi user).
    - Terbukti: `claude_desktop_config.json` per folder, jadi config MCP per profile dan profile baru mulai tanpa MCP server.
    - Terbukti: relaunch profile yang sedang jalan membuat proses ganda (lihat bagian Launch).
-   - Belum dikonfirmasi: akun asli tetap login saat profile kedua login; profile kedua langsung masuk setelah ditutup dan dibuka lagi.
+   - Terbukti (dikonfirmasi user): akun asli tetap login saat profile kedua login; profile kedua tetap login setelah ditutup dan dibuka lagi dengan perintah yang sama, dan prompt berjalan normal.
    - Belum dites: Windows.
    Daftar tes semula:
    - Jalankan perintah `open -n` dengan folder baru. Login akun kedua. Cek akun pertama tetap login.
