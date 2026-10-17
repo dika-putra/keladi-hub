@@ -40,7 +40,8 @@ Jadi "akun" cuma efek samping dari folder mana yang dipakai. Yang kita simpan ha
 
 - macOS: `open -n -a Claude --args --user-data-dir=<folder>`
 - Windows: jalankan `Claude.exe --user-data-dir=<folder>`. Lokasi exe harus ditemukan (lihat Risiko).
-- Electron single-instance lock berlaku per user-data-dir, jadi beberapa profile bisa jalan bersamaan. Klik profile yang sudah jalan: `open -n` akan membuka window ke instance itu atau instance baru [ASSUMPTION], dites di Phase 0.
+- Beberapa profile bisa jalan bersamaan (terbukti di Phase 0).
+- `open -n` untuk profile yang sudah jalan membuat proses Claude baru yang tetap hidup dengan data dir yang sama (terbukti di Phase 0). Dua proses di satu data dir berisiko merusak data. App harus cek dulu apakah profile sudah jalan (cari proses dengan `--user-data-dir=<folder>`) dan hanya mem-fokuskan window-nya, bukan launch lagi. Cara fokus per pid (misal AppleScript via System Events) belum dites.
 
 ## Hapus profile
 
@@ -59,7 +60,13 @@ Struktur minimal:
 
 ## Phase
 
-0. Spike manual (30 menit, sebelum nulis app)
+0. Spike manual (30 menit, sebelum nulis app). Hasil Mac, 2026-10-17:
+   - Terbukti: flag `--user-data-dir` jalan; folder baru mulai kosong dan menampilkan login; akun kedua bisa login terpisah (dikonfirmasi user).
+   - Terbukti: `claude_desktop_config.json` per folder, jadi config MCP per profile dan profile baru mulai tanpa MCP server.
+   - Terbukti: relaunch profile yang sedang jalan membuat proses ganda (lihat bagian Launch).
+   - Belum dikonfirmasi: akun asli tetap login saat profile kedua login; profile kedua langsung masuk setelah ditutup dan dibuka lagi.
+   - Belum dites: Windows.
+   Daftar tes semula:
    - Jalankan perintah `open -n` dengan folder baru. Login akun kedua. Cek akun pertama tetap login.
    - Jalankan dua profile bersamaan. Cek klik ulang profile yang sudah jalan.
    - Cek apakah `claude_desktop_config.json` (MCP) ikut pindah ke folder baru atau tetap global.
