@@ -98,8 +98,9 @@ final class Store: ObservableObject {
         }
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: claudeBundleID) else { return }
         let cfg = NSWorkspace.OpenConfiguration()
+        // Always a new instance: if another profile is running, macOS would otherwise just focus it.
+        cfg.createsNewApplicationInstance = true
         if p.id != Store.defaultProfile.id {
-            cfg.createsNewApplicationInstance = true
             cfg.arguments = ["--user-data-dir=\(dataDir(p).path)"]
         }
         NSWorkspace.shared.openApplication(at: appURL, configuration: cfg) { _, _ in
