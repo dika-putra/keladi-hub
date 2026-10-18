@@ -1,4 +1,5 @@
 import AppKit
+import CoreServices
 import Foundation
 
 struct Profile: Codable, Identifiable, Equatable {
@@ -244,6 +245,7 @@ final class Store: ObservableObject {
         refreshRunning()
         if let pid = runningPIDs[p.id] {
             NSRunningApplication(processIdentifier: pid)?.activate()
+            sendReopen(to: pid)
             return
         }
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: claudeBundleID) else { return }
@@ -256,6 +258,16 @@ final class Store: ObservableObject {
         NSWorkspace.shared.openApplication(at: appURL, configuration: cfg) { _, _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self.refreshRunning() }
         }
+    }
+
+    // Same Apple event a Dock click sends. activate() alone does not bring back minimized windows.
+    // Sent to this pid only, so other profiles' windows are left alone.
+    private func sendReopen(to pid: pid_t) {
+        let target = NSAppleEventDescriptor(processIdentifier: pid)
+        let event = NSAppleEventDescriptor(
+            eventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEReopenApplication),
+            targetDescriptor: target, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
+        AESendMessage(event.aeDesc, nil, AESendMode(kAENoReply), kAEDefaultTimeout)
     }
 
     private func load() {

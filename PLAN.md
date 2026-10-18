@@ -1,4 +1,4 @@
-# Claude Profile Switcher: Plan
+# Keladi Hub: Plan
 
 Menu bar app macOS (native Swift) untuk launch Claude Desktop dengan akun berbeda. Satu profile = satu data directory terpisah.
 
@@ -73,13 +73,15 @@ Percobaan memulihkan window yang diminimize lewat Accessibility API (`AXUIElemen
 
 ## Stack
 
-Native Swift, SwiftUI `MenuBarExtra` (style window), SwiftPM tanpa Xcode project. `build.sh` membangun `build/Claude Profiles.app` dengan `LSUIElement` (tanpa Dock icon) dan ad-hoc codesign.
-Keputusan 2026-10-17: fokus macOS dulu karena urgent. Windows dibuat di repo terpisah nanti. Tauri dan Flutter dipertimbangkan, tidak dipakai. Scaffold Tauri dibuang (tidak pernah di-commit).
+Native Swift (AppKit + SwiftUI), SwiftPM tanpa Xcode project. Icon menu bar lewat `NSStatusItem`; popup berupa `NSPanel` yang dipasang sendiri di bawah icon (`MenuBarExtra` dan `NSPopover` salah menghitung posisi saat ukuran isi berubah). `build.sh` membangun `build/Keladi Hub.app` dengan `LSUIElement` (tanpa Dock icon) dan ad-hoc codesign.
+Keputusan 2026-10-17: fokus macOS dulu karena urgent. Windows dibuat di repo terpisah nanti. Tauri dan Flutter dipertimbangkan, tidak dipakai.
+Nama 2026-10-18: Keladi Hub (sebelumnya Claude Profiles). Alasan: nama tidak memuat merek "Claude" supaya tidak terlihat sebagai produk resmi Anthropic. Logo: wajah berkumis bulan sabit sebagai hub dengan lima node berwarna (desain `captain` di `assets/make-icons.swift`).
 
 Struktur:
-- `Sources/ClaudeProfiles/Store.swift`: model profile, `profiles.json`, deteksi proses jalan (`ps`), launch/fokus, hapus aman.
-- `Sources/ClaudeProfiles/ContentView.swift`: popup: list, tambah, mode manage (rename, hapus dengan konfirmasi).
-- `Sources/ClaudeProfiles/App.swift`: `MenuBarExtra`.
+- `Sources/KeladiHub/Store.swift`: model profile, `profiles.json`, deteksi proses jalan (`ps`), launch/fokus, hapus aman, backup, restore, tukar default.
+- `Sources/KeladiHub/ContentView.swift`: isi popup: list, tambah, mode manage.
+- `Sources/KeladiHub/App.swift`: icon menu bar dan panel popup.
+- `assets/`: ikon dan skrip pembuatnya.
 
 ## Status
 

@@ -1,6 +1,6 @@
-# Claude Profiles
+# Keladi Hub
 
-App menu bar macOS untuk berpindah antar akun Claude Desktop. Tiap profile memakai folder data sendiri, jadi login satu akun tidak mengeluarkan akun lain. Semua akun bisa jalan bersamaan.
+App menu bar macOS untuk mengelola dan berpindah antar profile akun Claude Desktop (menu bar manager for Claude Desktop account profiles). Tiap profile memakai folder data sendiri, jadi login satu akun tidak mengeluarkan akun lain. Semua akun bisa jalan bersamaan.
 
 Status: macOS saja (Swift native). Versi Windows akan dibuat di repo terpisah. Rencana dan hasil riset ada di [PLAN.md](PLAN.md).
 
@@ -43,10 +43,10 @@ Butuh Xcode (command line tools cukup) dan macOS 14 atau lebih baru.
 
 ```bash
 ./build.sh
-open "build/Claude Profiles.app"
+open "build/Keladi Hub.app"
 ```
 
-`build.sh` membangun lewat SwiftPM, membuat `build/Claude Profiles.app` (menu bar saja, `LSUIElement`), dan menandatangani dengan ad-hoc signature. Untuk dibagikan ke orang lain perlu signing dan notarization sendiri.
+`build.sh` membangun lewat SwiftPM, membuat `build/Keladi Hub.app` (menu bar saja, `LSUIElement`), dan menandatangani dengan ad-hoc signature. Untuk dibagikan ke orang lain perlu signing dan notarization sendiri.
 
 ## Keterbatasan
 
@@ -61,8 +61,16 @@ open "build/Claude Profiles.app"
 
 ## Struktur
 
-- `Sources/ClaudeProfiles/Store.swift`: model, `profiles.json`, deteksi proses, launch dan fokus, hapus, backup, tukar default.
-- `Sources/ClaudeProfiles/ContentView.swift`: popup.
-- `Sources/ClaudeProfiles/PopupAnchor.swift`: menjaga ukuran dan posisi popup di bawah menu bar.
-- `Sources/ClaudeProfiles/App.swift`: `MenuBarExtra`.
+- `Sources/KeladiHub/Store.swift`: model, `profiles.json`, deteksi proses, launch dan fokus, hapus, backup, restore, tukar default.
+- `Sources/KeladiHub/ContentView.swift`: isi popup.
+- `Sources/KeladiHub/App.swift`: icon menu bar dan panel popup yang dipasang sendiri di bawah icon.
+- `assets/`: ikon app dan ikon menu bar, plus `make-icons.swift` yang menggambarnya (desain `captain`, `hub`, `pinwheel`, `leaf`).
 - `build.sh`: build dan bungkus jadi `.app`.
+
+## Catatan nama
+
+Nama folder data `ClaudeProfileSwitcher` di `~/Library/Application Support` dipertahankan dari nama app sebelumnya supaya profile dan backup yang sudah ada tetap terbaca.
+
+## Disclaimer
+
+Keladi Hub bukan produk resmi Anthropic dan tidak berafiliasi, didukung, atau disponsori oleh Anthropic. "Claude" adalah merek dagang Anthropic. App ini hanya membuka Claude Desktop yang sudah terpasang dengan folder data yang berbeda.

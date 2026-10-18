@@ -1,11 +1,14 @@
 import SwiftUI
 
+// No SwiftUI App/Scene: a Settings scene is what opened the blank Settings window.
 @main
-struct ClaudeProfilesApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-
-    var body: some Scene {
-        Settings { EmptyView() }
+enum Main {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        app.run()
     }
 }
 
@@ -38,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "person.2.circle", accessibilityDescription: "Claude Profiles")
+        item.button?.image = menuBarImage()
         item.button?.target = self
         item.button?.action = #selector(toggle)
         self.item = item
@@ -71,6 +74,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sizeObserver = host.observe(\.preferredContentSize, options: [.new]) { [weak self] _, _ in
             DispatchQueue.main.async { self?.resize() }
         }
+    }
+
+    // Template image: macOS tints it for light/dark menu bars. The PNG is 36 px for an 18 pt icon.
+    private func menuBarImage() -> NSImage? {
+        if let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"), let image = NSImage(contentsOf: url) {
+            image.size = NSSize(width: 18, height: 18)
+            image.isTemplate = true
+            return image
+        }
+        return NSImage(systemSymbolName: "person.2.circle", accessibilityDescription: "Keladi Hub")
     }
 
     @objc private func toggle() {
