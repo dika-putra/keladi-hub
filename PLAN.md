@@ -1,108 +1,133 @@
 # Keladi Hub: Plan
 
-Menu bar app macOS (native Swift) untuk launch Claude Desktop dengan akun berbeda. Satu profile = satu data directory terpisah.
+A native Swift macOS menu bar app that launches Claude Desktop with different accounts. One profile = one separate data directory.
 
-## Cara link akun Claude ke Claude Desktop
+Claim tags used below: [FACT] read in code or docs, or ran it. [INFERENCE] reasoning, with a confidence level. Anything not checked is marked "unverified".
 
-Tidak ada link di level app kita. Switcher tidak menyentuh credential sama sekali.
+## How an account is linked to Claude Desktop
 
-1. Profile baru = folder kosong, misal `.../Claude-<id>`.
-2. Launch Claude Desktop dengan `--user-data-dir=<folder itu>`.
-3. Karena folder kosong, Claude Desktop tampil layar login. User login sendiri dengan akun yang diinginkan (browser flow biasa).
-4. Sesi login (Cookies, Local Storage, dll) tersimpan di folder itu. Launch berikutnya langsung masuk.
+There is no link at the app level. The switcher never touches credentials.
 
-Jadi "akun" cuma efek samping dari folder mana yang dipakai. Yang kita simpan hanya: id, nama, path folder.
+1. A new profile is an empty folder, for example `.../Claude-<id>`.
+2. Claude Desktop is launched with `--user-data-dir=<that folder>`.
+3. Because the folder is empty, Claude Desktop shows its login screen. The user signs in with the account they want (the normal browser flow).
+4. The login session (Cookies, Local Storage, and so on) is stored in that folder. The next launch signs in directly.
 
-[FACT] Claude Desktop di Mac ini adalah Electron (ada `Electron Framework.framework`) dan data dir `~/Library/Application Support/Claude` berisi `Cookies`, `Local Storage`, `Session Storage`, dll.
-[FACT] Flag `--user-data-dir` dihormati oleh Claude Desktop di macOS (dites di Phase 0).
+So the "account" is a side effect of which folder is used. The app only stores: id, name, folder path.
 
-## Fitur
+[FACT] Claude Desktop on this Mac is an Electron app (it has `Electron Framework.framework`), and its data directory `~/Library/Application Support/Claude` holds `Cookies`, `Local Storage`, `Session Storage`, and more.
+[FACT] The `--user-data-dir` flag is honored by Claude Desktop on macOS (tested in Phase 0).
 
-- Tray icon (menu bar Mac; Windows di repo terpisah nanti). Tidak ada window utama, tidak ada Dock icon.
-- Klik tray: popup berisi list profile.
-- Klik profile: launch Claude Desktop dengan profile itu.
-- Tombol "+": tambah profile, isi nama.
-- Mode manage: rename dan hapus profile.
-- Profile "Default" otomatis ada, menunjuk ke data dir asli Claude (launch tanpa flag), jadi akun yang sudah login tidak perlu dimigrasi.
+## Features
+
+- Menu bar icon (macOS; Windows in a separate repo later). No main window, no Dock icon.
+- Click the icon: a popup lists the profiles.
+- Click a profile: launch Claude Desktop with that profile. A running profile shows **Show** and is brought to the front, including a minimized window.
+- **Add profile**: enter a name, then **Login** on first launch.
+- **Manage** mode: Rename, Restore, Make default, Remove (labeled buttons, two-column grid).
+- The default profile always exists and points to Claude's original data directory (launched without the flag), so an account that is already signed in needs no migration. It can be renamed and can be moved to another profile.
+- The popup header shows the version and build id (for example `v0.1.2 (cb3553c)`). The footer shows the author and a link to the repository.
 
 ## Data model
 
-`profiles.json` di app config dir (`~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`):
+`profiles.json` in the app config directory (`~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`):
 
 ```json
-[{ "id": "a1b2c3", "name": "Kerja" }, { "id": "d4e5f6", "name": "Pribadi" }]
+{ "defaultName": "Default", "profiles": [{ "id": "a1b2c3d4", "name": "Work" }] }
 ```
 
-- Folder data = `<base>/Claude-<id>`. Pakai id, bukan nama, supaya rename hanya ubah label dan tidak perlu pindah folder.
-- Default tidak disimpan di file; hardcoded, tidak bisa dihapus atau rename.
+- The data folder is `<base>/Claude-<id>`. The id, not the name, names the folder, so renaming only changes the label and never moves a folder.
+- The default profile is not stored as a profile. It is hard-coded (id `default`, folder `Claude`). Only its name is stored (`defaultName`). It cannot be removed.
+- The first version of the file was a plain array of profiles. The app still reads that format.
 
 ## Launch
 
-- macOS: `open -n -a Claude --args --user-data-dir=<folder>`
-- Windows: jalankan `Claude.exe --user-data-dir=<folder>`. Lokasi exe harus ditemukan (lihat Risiko).
-- Beberapa profile bisa jalan bersamaan (terbukti di Phase 0).
-- `open -n` untuk profile yang sudah jalan membuat proses Claude baru yang tetap hidup dengan data dir yang sama (terbukti di Phase 0). Dua proses di satu data dir berisiko merusak data. App harus cek dulu apakah profile sudah jalan (cari proses dengan `--user-data-dir=<folder>`) dan hanya mem-fokuskan window-nya, bukan launch lagi. Fokus per pid lewat NSRunningApplication belum dites manual.
+- macOS: `NSWorkspace.openApplication` with `createsNewApplicationInstance = true` and the argument `--user-data-dir=<folder>` (the default profile gets no argument). This is the same as `open -n -a Claude --args --user-data-dir=<folder>`.
+- Windows: run `Claude.exe --user-data-dir=<folder>`. The location of the exe still has to be found (see Risks).
+- Several profiles can run at the same time (proven in Phase 0).
+- [FACT] `open -n` for a profile that is already running starts another Claude process on the same data directory, and that process stays alive. Two processes on one data directory risk corrupting data. The app therefore detects running profiles first (it reads `ps` output and matches `--user-data-dir=<folder>`, and a main process without the flag is the default profile) and only focuses the existing window.
+- Always starting a new instance matters: without it, if another profile is running, macOS only focuses that Claude instead of opening the requested profile. This bug was found in testing.
+- Show: `NSRunningApplication.activate()` plus a "reopen" Apple event (`kAEReopenApplication`) sent to that process only, the same event a Dock click sends. `activate()` alone does not bring back a minimized window. macOS may ask once for Automation permission; `NSAppleEventsUsageDescription` is set in `Info.plist`. Confirmed working by the user.
 
-## Hapus profile
+## Removing a profile
 
-Satu aksi: "Remove and delete all local data", dengan penjelasan di panel konfirmasi (tanpa dialog sistem, karena dialog menutup popup menu bar). Opsi "keep data" dibuang karena folder yatim tidak bisa dipasang lagi ke profile baru (id baru berarti folder baru).
-- Ditolak selama Claude profile itu masih jalan (panel menampilkan peringatan).
-- Hanya menghapus folder `Claude-<id>` tepat di bawah `~/Library/Application Support`. Profile default tidak bisa dihapus.
-- Isi yang terhapus: login (Cookies, Local Storage), config MCP, cache, daftar sesi Code, scratch workspace.
-- Tidak terhapus: chat di claude.ai (di akun Anthropic), transkrip Code di `~/.claude/projects` (dipakai bersama semua profile), repo di disk.
+One action: "Remove and delete all local data", explained in the confirmation panel. The panel is inline because a system dialog closes the menu bar popup before its buttons can be clicked. A "keep data" option was dropped because an orphaned folder cannot be attached to a new profile (a new id means a new folder).
+- Refused while Claude for that profile is running (the panel shows a warning).
+- Only deletes the `Claude-<id>` folder directly under `~/Library/Application Support` (the path is validated). The default profile cannot be removed.
+- Deleted: login (Cookies, Local Storage), MCP config, cache, the Code session list, scratch workspaces.
+- Not deleted: chats on claude.ai (they live in the Anthropic account), Code transcripts in `~/.claude/projects` (shared by all profiles), repositories on disk.
 
-### Backup histori Code sebelum hapus
+### Code history backup before removal
 
-Satu backup per akun Claude, bukan per hapus. Kunci backup adalah id akun, yaitu nama folder di bawah `claude-code-sessions/` (contoh `xxxxxxxx-xxxx-...`). Email tidak dipakai karena tidak tersimpan di folder profile (tidak ada field email di config atau file sesi yang diperiksa), sedangkan id akun otomatis ada, stabil, dan unik.
-Lokasi (folder `Library` tersembunyi di Finder): `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<id akun>/`
-Isi: `claude-code-sessions/<id akun>/`, `scratch-workspaces/<id akun>/`, `git-worktrees.json`, `info.json` (nama profile, waktu simpan, folder sumber).
-Aturan update: backup digabung (merge), bukan diganti. Sesi baru ditambah, sesi dengan id yang sama ditimpa versi terbaru, sesi yang sudah ada di backup tidak dihapus. Ini sengaja: mengganti backup dengan versi terbaru saja bisa menghapus sesi lama kalau profile terakhir yang dihapus lebih sedikit isinya. Kalau mau replace murni, itu perubahan kecil di `backupHistory`.
-Kalau penyalinan gagal, profile dan datanya tidak dihapus. Backup versi pertama (folder `<nama>-<id>-<tanggal>`) tidak dikenali app dan tidak dimigrasi; salin manual dengan `cp -R <backup>/. <folder profile>/`.
+One backup per Claude account, not one per removal. The backup key is the account id, which is the folder name under `claude-code-sessions/`. Email is not used: no email field exists in the profile folder's config or session files that were inspected, while the account id is always present, stable, and unique.
+- [FACT] The same account produced the same id across five different profile folders, and two different accounts produced two different ids.
+- [INFERENCE - medium] The id is assigned by Anthropic and should stay the same for the life of the account. No official documentation was found.
+- Location (the `Library` folder is hidden in Finder): `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<account id>/`
+- Contents: `claude-code-sessions/<account id>/`, `scratch-workspaces/<account id>/`, `git-worktrees.json`, and `info.json` (profile name, save time, source folder).
+- Update rule: the backup is merged, not replaced. New sessions are added, sessions with the same id are overwritten by the newer version, and sessions already in the backup are never removed. This is intentional: replacing the backup with the latest copy could delete older sessions when the last removed profile had fewer of them. Pure replace would be a small change in `backupHistory`.
+- If the copy fails, the profile and its data are not deleted.
+- Backups from the first version (folders named `<name>-<id>-<date>`) are not recognized and were not migrated. Copy them by hand with `cp -R <backup>/. <profile folder>/`.
 
-Restore: Manage > ikon panah melingkar > pilih backup akun. Syarat: profile tujuan pernah dibuka sekali dan Claude-nya tertutup. App menggabungkan isi backup ke folder profile lalu menulis ulang path absolut lama (dari `info.json`) di file sesi ke path profile tujuan.
-Terbukti (restore manual, 2026-10-17): daftar sesi Code muncul lagi di profile baru. Belum terbukti: restore lewat tombol, dan sesi di scratch workspace.
+Restore: Manage > Restore > pick an account backup. Requirements: the target profile has been opened once and its Claude is closed. The app merges the backup into the profile folder and then rewrites absolute paths of the old folder (taken from `info.json`) inside the session files to the target path.
+Proven (manual restore, 2026-10-17): the Code session list reappears in a new profile. Not proven: restore through the button, and sessions that worked in a scratch workspace.
 
-## Set as default
+## Make default
 
-Default = akun yang terbuka kalau Claude dibuka dari Spotlight atau Dock = isi folder `Claude`. Memindahkannya berarti menukar folder: `Claude` -> `Claude-swap-tmp`, `Claude-<id>` -> `Claude`, `Claude-swap-tmp` -> `Claude-<id>`, lalu menukar nama kedua profile supaya nama tetap mengikuti akunnya. Rollback kalau satu langkah gagal. Ditolak kalau ada Claude yang jalan, atau profile target belum pernah dibuka (foldernya belum ada).
-Belum diuji. Risiko: sesi Code di scratch workspace menyimpan path absolut ke folder lama.
+Default = the account that opens when Claude is started from Spotlight or the Dock = the contents of the `Claude` folder. Moving it means swapping folders: `Claude` -> `Claude-swap-tmp`, `Claude-<id>` -> `Claude`, `Claude-swap-tmp` -> `Claude-<id>`, then swapping the names of the two profiles so each name keeps following its account. If a step fails, the earlier steps are rolled back. It is refused when any Claude process is running, when a leftover `Claude-swap-tmp` exists, or when the target profile has never been opened (its folder does not exist).
+Tested by the user on 2026-10-18 and it worked.
+Risks: if the app is interrupted between the renames, `Claude` can be missing while the data sits in `Claude-swap-tmp` (nothing is lost, but it must be renamed back by hand). Code sessions that used a scratch workspace store the absolute path of the old folder.
 
-## Catatan 2026-10-17: build dihapus macOS
+## Stack and decisions
 
-Percobaan memulihkan window yang diminimize lewat Accessibility API (`AXUIElement`), dengan tanda tangan Apple Development, berakhir dengan `.app` dihapus macOS karena terdeteksi malware. Nama deteksi dan penyebab pasti tidak diketahui (log sistem tidak mencatat alasannya). Kode Accessibility dan log `/tmp` dibuang, tanda tangan kembali ad-hoc. Pemulihan window yang diminimize belum ada. Kalau dicoba lagi, minta izin sekali dan jangan pakai build yang sama dengan yang dihapus.
+Native Swift (AppKit + SwiftUI), SwiftPM, no Xcode project. The menu bar icon is an `NSStatusItem`. The popup is an `NSPanel` placed under the icon by the app itself: both `MenuBarExtra` and `NSPopover` repositioned incorrectly when the content size changed. The anchor is read once when the icon is clicked and every resize is positioned from it.
+`build.sh` builds a universal binary (arm64 + x86_64) and creates `build/Keladi Hub.app` with `LSUIElement` (no Dock icon), signed ad hoc (or with `SIGN_ID`). `make-dmg.sh` builds the app and packages `build/Keladi-Hub-<version>-macOS.dmg`.
 
-## Stack
+Decision log:
+- 2026-10-17: macOS first because it was urgent. Windows will be a separate repo later. Tauri and Flutter were considered and not used.
+- 2026-10-18: renamed from "Claude Profiles" to **Keladi Hub**. Reason: the name does not contain the "Claude" trademark, so it does not look like an official Anthropic product. Bundle id `com.dienn.keladihub`. A sound-alike name ("Klewdi") was rejected for a public repository. The README carries a not-affiliated disclaimer.
+- 2026-10-18: logo "captain": a round face with a white crescent mustache as the hub, with five colored nodes as the crew (design `captain` in `assets/make-icons.swift`, which also contains `hub`, `pinwheel`, and `leaf`). The menu bar icon is a single-color template image. The logo is original; it does not copy any existing emblem.
+- 2026-10-18: the repository is public under the MIT license. Releases ship as a DMG, ad-hoc signed and not notarized (see Distribution).
 
-Native Swift (AppKit + SwiftUI), SwiftPM tanpa Xcode project. Icon menu bar lewat `NSStatusItem`; popup berupa `NSPanel` yang dipasang sendiri di bawah icon (`MenuBarExtra` dan `NSPopover` salah menghitung posisi saat ukuran isi berubah). `build.sh` membangun `build/Keladi Hub.app` dengan `LSUIElement` (tanpa Dock icon) dan ad-hoc codesign.
-Keputusan 2026-10-17: fokus macOS dulu karena urgent. Windows dibuat di repo terpisah nanti. Tauri dan Flutter dipertimbangkan, tidak dipakai.
-Nama 2026-10-18: Keladi Hub (sebelumnya Claude Profiles). Alasan: nama tidak memuat merek "Claude" supaya tidak terlihat sebagai produk resmi Anthropic. Logo: wajah berkumis bulan sabit sebagai hub dengan lima node berwarna (desain `captain` di `assets/make-icons.swift`).
+Structure:
+- `Sources/KeladiHub/Store.swift`: profile model, `profiles.json`, running-process detection (`ps`), launch and focus, safe removal, backup, restore, swap default, demo data for screenshots.
+- `Sources/KeladiHub/ContentView.swift`: popup content: list, add, manage mode, confirmation panels.
+- `Sources/KeladiHub/App.swift`: menu bar icon, popup panel, and the `--screenshot <dir>` mode.
+- `assets/`: icons, `make-icons.swift`, and README screenshots.
 
-Struktur:
-- `Sources/KeladiHub/Store.swift`: model profile, `profiles.json`, deteksi proses jalan (`ps`), launch/fokus, hapus aman, backup, restore, tukar default.
-- `Sources/KeladiHub/ContentView.swift`: isi popup: list, tambah, mode manage.
-- `Sources/KeladiHub/App.swift`: icon menu bar dan panel popup.
-- `assets/`: ikon dan skrip pembuatnya.
+## Distribution
+
+- Universal binary, ad-hoc signed, **not notarized**. macOS blocks it on first launch; the user has to choose Open Anyway in System Settings > Privacy & Security.
+- Notarization needs a Developer ID Application certificate from the paid Apple Developer Program. The Apple Development certificate on the dev machine cannot be used for it, and certificates that belong to other accounts must not be used for this project. Not planned for now.
+- Every release page lists the SHA-256 of the DMG.
+- Releases: v0.1.0 and v0.1.1 were zip files (the v0.1.0 release was deleted, its tag remains). v0.1.2 is the first DMG.
+
+README screenshots are generated by the app itself: `KeladiHub --screenshot <dir>` shows the panel with demo data over a plain backdrop, captures its own window, and quits. Demo mode never reads or writes the real config.
+
+## Incident 2026-10-17: build deleted by macOS
+
+An attempt to restore minimized windows through the Accessibility API (`AXUIElement`), signed with an Apple Development certificate, ended with the `.app` being deleted by macOS as malware. The detection name and the exact cause are unknown (the system log did not record a reason). The Accessibility code and the `/tmp` debug log were removed and the signature went back to ad hoc. Restoring minimized windows was later solved with the reopen Apple event instead (see Launch). If an Accessibility approach is tried again, ask for permission only once and do not reuse the build that was deleted.
 
 ## Status
 
-- Phase 0 (spike macOS): selesai, lihat hasil di bawah. Windows belum dites.
-- Phase 1-4 versi macOS: kode pertama sudah ada dan ter-build. Launch/fokus, tambah, rename, hapus sudah ditulis. Belum diuji manual oleh user: klik tray, popup, launch profile, fokus profile yang jalan, rename, hapus.
-- Belum: icon custom, auto-start saat login, signing + notarization untuk dibagikan.
+- Phase 0 (macOS spike): done. Windows is not tested.
+- macOS app: done and released (v0.1.2). Launch, focus, add, rename, remove, restore, make default, backups, and the popup UI are implemented. Tested by the user: launch, focus, add, rename, remove, make default, popup layout and positioning.
+- Not done: restore through the button for scratch-workspace sessions, notarization, the Windows version, start at login.
 
-Hasil Phase 0 macOS, 2026-10-17:
-- Terbukti: flag `--user-data-dir` jalan; folder baru mulai kosong dan menampilkan login; akun kedua login terpisah; akun asli tetap login; sesi bertahan setelah ditutup dan dibuka lagi; chat berjalan normal.
-- Terbukti: `claude_desktop_config.json` per folder, jadi config MCP per profile dan profile baru mulai tanpa MCP server.
-- Terbukti: relaunch profile yang sedang jalan membuat proses ganda, jadi app cek dulu dan hanya fokus (`NSRunningApplication.activate`, belum diuji).
-- Belum dites: Windows (lokasi exe, MSIX), keluar-masuk popup saat banyak profile.
+Phase 0 results on macOS, 2026-10-17:
+- Proven: the `--user-data-dir` flag works; a new folder starts empty and shows the login screen; a second account signs in separately; the original account stays signed in; the session survives closing and reopening; chat works normally.
+- Proven: `claude_desktop_config.json` is per folder, so MCP configuration is per profile and a new profile starts without MCP servers.
+- Proven: relaunching a running profile creates a duplicate process, so the app checks first and only focuses.
+- Proven: Claude Desktop keeps a single `Claude Safe Storage` Keychain entry shared by all profiles, and a copied profile folder under another name stayed signed in.
+- Not tested: Windows (exe location, MSIX).
 
-Tidak termasuk (tambah kalau butuh): wrapper `.app` per profile dengan Dock icon sendiri, indikator profile aktif, auto-start saat login, import history.
+Out of scope (add if needed): a wrapper `.app` per profile with its own Dock icon, a "logged in" status check, start at login, history import.
 
-## Risiko dan hal yang belum diverifikasi
+## Risks and unverified items
 
-- Flag `--user-data-dir` di Claude Desktop: unverified.
-- Windows: Claude Desktop mungkin dipasang sebagai MSIX/Store app. Path exe tidak stabil dan launch dengan argumen bisa dibatasi. Unverified, cek di Phase 0.
-- Semua instance memakai Dock icon / taskbar icon yang sama, jadi sulit membedakan window mana akun mana. Nama window atau avatar di Claude Desktop jadi satu-satunya petunjuk.
-- Keychain/credential store: Electron `safeStorage` biasanya pakai satu key bersama di Keychain, token terenkripsi tetap di data dir. Kemungkinan aman, unverified.
-- Update Claude Desktop bisa mengubah nama app, path, atau perilaku flag.
-- Terms of Service Anthropic soal beberapa akun: belum dicek. Baca dulu kalau akan dibagikan ke orang lain.
-- Hapus data dir adalah aksi permanen. Pastikan path divalidasi (hanya folder `Claude-<id>` di bawah base) supaya tidak bisa menghapus folder lain.
+- Windows: Claude Desktop may be installed as an MSIX / Store app. The exe path may be unstable and launching with arguments may be restricted. Unverified; check when the Windows version starts.
+- All Claude instances share one Dock or taskbar icon, so it is hard to tell which window belongs to which account. The account shown inside Claude Desktop is the only hint.
+- Keychain: [INFERENCE - medium] Electron `safeStorage` uses one shared key in the Keychain and the encrypted tokens stay in the data folder, so folders can be renamed or copied on the same Mac. Deleting the Keychain entry would sign out every profile.
+- Claude Desktop updates can change the app name, paths, or the behavior of the flag.
+- Anthropic's Terms of Service on multiple accounts. Read on 2026-10-18 through a page summary (not a full read): the Consumer Terms do not address holding more than one account and prohibit sharing account access and automated or non-human access; the Usage Policy prohibits creating multiple accounts to avoid detection, evading bans, and reselling access. Nothing found that forbids two accounts per person. Using several accounts to avoid usage limits is the risky pattern. A work account on a company email can be linked to the employer's enterprise account. Not legal advice.
+- Trademark: the name and logo avoid the "Claude" mark and the README says the project is not affiliated with Anthropic. Anthropic's guidelines say third parties may not imply affiliation. No rule specific to app names was found. Unverified whether the name "Keladi Hub" is used elsewhere.
+- Removing a data folder is permanent. The path is validated (only `Claude-<id>` directly under the base) so that no other folder can be deleted.

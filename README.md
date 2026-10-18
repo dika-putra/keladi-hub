@@ -2,7 +2,7 @@
 
 A macOS menu bar app that manages and switches between Claude Desktop account profiles. Each profile has its own data folder, so signing in to one account never signs out another, and all of them can run at the same time.
 
-Status: macOS only (native Swift). A Windows version is planned in a separate repository. Project notes and research are in [PLAN.md](PLAN.md) (in Indonesian).
+Status: macOS only (native Swift). A Windows version is planned in a separate repository. Project notes, decisions, and research are in [PLAN.md](PLAN.md).
 
 ![Profile list](assets/screenshots/popup.png) ![Manage mode](assets/screenshots/manage.png)
 
