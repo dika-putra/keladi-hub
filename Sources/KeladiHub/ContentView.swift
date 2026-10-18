@@ -30,6 +30,8 @@ struct ContentView: View {
     @State private var makingDefault: Profile?
     @State private var restoring: Profile?
     @State private var message: String?
+    @State private var loginMessage: String?
+    @State private var loginTick = 0  // forces a re-render so the switch shows the real status after a change
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -48,6 +50,7 @@ struct ContentView: View {
             } else {
                 footer
             }
+            loginRow
             credits
         }
         .padding(14)
@@ -66,6 +69,31 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .help("Quit Keladi Hub")
+        }
+    }
+
+    // Reads the real status on every render; the popup re-renders each time it opens.
+    private var loginRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Start at login").font(.callout)
+                Spacer()
+                Toggle("Start at login", isOn: Binding(
+                    get: { _ = loginTick; return LoginItem.isEnabled },
+                    set: { on in
+                        loginMessage = LoginItem.set(on)
+                        loginTick += 1
+                        if loginMessage == nil, LoginItem.needsApproval {
+                            loginMessage = "Approve Keladi Hub in System Settings > General > Login Items."
+                        }
+                    }))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+            }
+            if let loginMessage {
+                Text(loginMessage).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

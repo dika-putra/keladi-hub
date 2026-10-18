@@ -86,11 +86,19 @@ Decision log:
 - 2026-10-17: macOS first because it was urgent. Windows will be a separate repo later. Tauri and Flutter were considered and not used.
 - 2026-10-18: renamed from "Claude Profiles" to **Keladi Hub**. Reason: the name does not contain the "Claude" trademark, so it does not look like an official Anthropic product. Bundle id `com.dienn.keladihub`. A sound-alike name ("Klewdi") was rejected for a public repository. The README carries a not-affiliated disclaimer.
 - 2026-10-18: logo "captain": a round face with a white crescent mustache as the hub, with five colored nodes as the crew (design `captain` in `assets/make-icons.swift`, which also contains `hub`, `pinwheel`, and `leaf`). The menu bar icon is a single-color template image. The logo is original; it does not copy any existing emblem.
+- 2026-10-19 roadmap review (grilling session), agreed with the author:
+  - Audience: a personal tool shared as is. No support promise. The README says so.
+  - Scope: Claude Desktop only. Research on other AI desktop apps (secondary sources, nothing tested here): VS Code fork editors such as Cursor are Electron and may work only partly (MCP config can leak between folders); Gemini's Mac app is native Swift, so no data-folder flag; ChatGPT desktop is disputed (native or Electron) and OpenAI says account switching is web only; Perplexity has its own switcher. An adapter architecture only gets built after a second app passes a local test (`open -n -a <app> --args --user-data-dir=<folder>`).
+  - Windows: not started until there is a real need and a Windows machine to test on.
+  - Restore for scratch-workspace sessions stays a documented limitation.
+  - Notarization: not now. Revisit if several outside users are blocked by the macOS warning.
+  - Start at login: added, default off, through `SMAppService.mainApp` (`LoginItem.swift`). Unverified whether registration works for an ad-hoc signed app; if macOS refuses, the popup shows the error. Test it from the Applications folder.
 - 2026-10-18: the repository is public under the MIT license. Releases ship as a DMG, ad-hoc signed and not notarized (see Distribution).
 
 Structure:
 - `Sources/KeladiHub/Store.swift`: profile model, `profiles.json`, running-process detection (`ps`), launch and focus, safe removal, backup, restore, swap default, demo data for screenshots.
 - `Sources/KeladiHub/ContentView.swift`: popup content: list, add, manage mode, confirmation panels.
+- `Sources/KeladiHub/LoginItem.swift`: Start at login through `SMAppService`.
 - `Sources/KeladiHub/App.swift`: menu bar icon, popup panel, and the `--screenshot <dir>` mode.
 - `assets/`: icons, `make-icons.swift`, and README screenshots.
 
@@ -111,7 +119,8 @@ An attempt to restore minimized windows through the Accessibility API (`AXUIElem
 
 - Phase 0 (macOS spike): done. Windows is not tested.
 - macOS app: done and released (v0.1.2). Launch, focus, add, rename, remove, restore, make default, backups, and the popup UI are implemented. Tested by the user: launch, focus, add, rename, remove, make default, popup layout and positioning.
-- Not done: restore through the button for scratch-workspace sessions, notarization, the Windows version, start at login.
+- Not done by decision: restore for scratch-workspace sessions, notarization, the Windows version, support for other AI apps.
+- Added, awaiting a real-world test by the author: Start at login.
 
 Phase 0 results on macOS, 2026-10-17:
 - Proven: the `--user-data-dir` flag works; a new folder starts empty and shows the login screen; a second account signs in separately; the original account stays signed in; the session survives closing and reopening; chat works normally.

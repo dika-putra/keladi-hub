@@ -2,11 +2,17 @@
 
 A macOS menu bar app that manages and switches between Claude Desktop account profiles. Each profile has its own data folder, so signing in to one account never signs out another, and all of them can run at the same time.
 
+Scope: today it only works with Claude Desktop. Other AI desktop apps are not supported, and it is not known which of them could be (many are native apps without a data-folder option).
+
 Status: macOS only (native Swift). A Windows version is planned in a separate repository. Project notes, decisions, and research are in [PLAN.md](PLAN.md).
 
 ![Profile list](assets/screenshots/popup.png) ![Manage mode](assets/screenshots/manage.png)
 
 The screenshots use sample data (made with `KeladiHub --screenshot <folder>`), not real accounts.
+
+## Project status
+
+A personal project, shared as is. Issues are read when time allows, and no support is promised. It may break when Claude Desktop changes.
 
 ## Install
 
@@ -24,6 +30,7 @@ The app is **not signed with a Developer ID and not notarized by Apple**, so mac
 - The default profile is the account that opens when you start Claude from Spotlight or the Dock. You can rename it and you can move the default to another profile.
 - Removing a profile deletes its local data, but its Code session history is saved first, as one backup per Claude account (merged, not replaced).
 - **Restore** puts a saved Code session history back into any profile.
+- **Start at login** is a switch at the bottom of the popup. It is off by default.
 - The popup header shows the version and build id (for example `v0.1.1 (7f3843d)`). Include it in bug reports.
 
 ## Why use it
@@ -66,6 +73,9 @@ The app is not notarized. Try to open it once, then open System Settings > Priva
 
 **macOS removed the app and called it malware.**
 An early development build that used the Accessibility API was deleted by macOS as malware. The reason was never shown, and the current code does not use Accessibility. Unsigned or ad-hoc signed apps can trigger this kind of warning. If it happens to you, do not turn off macOS protection to work around it. Build the app from source and check the code yourself, and please open an issue with the exact message macOS showed.
+
+**The Start at login switch does not turn on.**
+macOS may need you to approve it: open System Settings > General > Login Items and allow Keladi Hub. Registration can also fail when the app is not in the Applications folder, so move it there first. If it still fails, the popup shows the error macOS returned; please include it in an issue.
 
 **The menu bar icon is not visible.**
 The menu bar may be full, and macOS hides the icons that do not fit (this is common on Macs with a notch). Quit some other menu bar apps, or use a menu bar manager, and check again.
