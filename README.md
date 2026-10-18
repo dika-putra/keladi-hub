@@ -10,9 +10,9 @@ The screenshots use sample data (made with `KeladiHub --screenshot <folder>`), n
 
 ## Install
 
-Download `Keladi-Hub-<version>-macOS.zip` from the Releases page, unzip it, and move `Keladi Hub.app` to your Applications folder. Requires macOS 14 or newer (Apple Silicon and Intel).
+Download `Keladi-Hub-<version>-macOS.dmg` from the Releases page, open it, and drag `Keladi Hub.app` to the Applications folder. Requires macOS 14 or newer (Apple Silicon and Intel).
 
-The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: try to launch the app, then go to System Settings > Privacy & Security and click **Open Anyway**. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the zip.
+The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: try to launch the app, then go to System Settings > Privacy & Security and click **Open Anyway**. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the DMG.
 
 ## Features
 
@@ -57,7 +57,7 @@ Requires Xcode (the command line tools are enough) and macOS 14 or newer.
 open "build/Keladi Hub.app"
 ```
 
-`build.sh` builds a universal binary with SwiftPM, creates `build/Keladi Hub.app` (menu bar only, `LSUIElement`), and signs it ad hoc. Set `SIGN_ID` to a code signing identity to sign with your own certificate. To share the app widely you need your own Developer ID signing and notarization.
+`build.sh` builds a universal binary with SwiftPM, creates `build/Keladi Hub.app` (menu bar only, `LSUIElement`), and signs it ad hoc. `./make-dmg.sh` runs `build.sh` and then packages the app into `build/Keladi-Hub-<version>-macOS.dmg`. Set `SIGN_ID` to a code signing identity to sign with your own certificate. To share the app widely you need your own Developer ID signing and notarization.
 
 ## Troubleshooting
 
@@ -114,6 +114,7 @@ Open an issue with the version line from the popup header, your macOS version, w
 - `Sources/KeladiHub/App.swift`: the menu bar icon and the popup panel, placed under the icon.
 - `assets/`: the app icon and menu bar icon, plus `make-icons.swift`, which draws them (designs `captain`, `hub`, `pinwheel`, `leaf`).
 - `build.sh`: builds and packages the `.app`.
+- `make-dmg.sh`: builds the app and packages it as a DMG.
 
 ## About the name
 
