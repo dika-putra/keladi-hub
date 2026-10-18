@@ -1,90 +1,128 @@
 # Keladi Hub
 
-App menu bar macOS untuk mengelola dan berpindah antar profile akun Claude Desktop (menu bar manager for Claude Desktop account profiles). Tiap profile memakai folder data sendiri, jadi login satu akun tidak mengeluarkan akun lain. Semua akun bisa jalan bersamaan.
+A macOS menu bar app that manages and switches between Claude Desktop account profiles. Each profile has its own data folder, so signing in to one account never signs out another, and all of them can run at the same time.
 
-Status: macOS saja (Swift native). Versi Windows akan dibuat di repo terpisah. Rencana dan hasil riset ada di [PLAN.md](PLAN.md).
+Status: macOS only (native Swift). A Windows version is planned in a separate repository. Project notes and research are in [PLAN.md](PLAN.md) (in Indonesian).
 
-![Daftar profile](assets/screenshots/popup.png) ![Mode Manage](assets/screenshots/manage.png)
+![Profile list](assets/screenshots/popup.png) ![Manage mode](assets/screenshots/manage.png)
 
-Screenshot memakai data contoh (dibuat dengan `KeladiHub --screenshot <folder>`), bukan akun sungguhan.
+The screenshots use sample data (made with `KeladiHub --screenshot <folder>`), not real accounts.
 
-## Instalasi
+## Install
 
-Unduh `Keladi-Hub-<versi>-macOS.zip` dari halaman Releases, buka zip-nya, lalu pindahkan `Keladi Hub.app` ke folder Applications. Butuh macOS 14 atau lebih baru (Apple Silicon dan Intel).
+Download `Keladi-Hub-<version>-macOS.zip` from the Releases page, unzip it, and move `Keladi Hub.app` to your Applications folder. Requires macOS 14 or newer (Apple Silicon and Intel).
 
-App ini **belum ditandatangani Developer ID dan belum di-notarize oleh Apple**, jadi macOS akan memblokirnya saat pertama dibuka. Untuk membukanya: coba buka app, lalu di System Settings > Privacy & Security tekan **Open Anyway**. Kalau tidak mau memercayai binary ini, bangun dari kode sumber (lihat Build di bawah). Checksum SHA-256 tiap rilis ada di halaman Releases.
+The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: try to launch the app, then go to System Settings > Privacy & Security and click **Open Anyway**. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the zip.
 
-## Fitur
+## Features
 
-- Icon di menu bar, tanpa Dock icon dan tanpa window utama. Klik icon, muncul popup berisi daftar profile.
-- Klik satu baris profile untuk membuka Claude dengan akun itu. Popup menutup sendiri.
-- Profile yang sedang jalan punya titik hijau dan label **Show**. Klik untuk memfokuskan window yang sudah ada, tidak membuka proses kedua.
-- **+ Add profile**: beri nama, lalu klik **Login** dan masuk dengan akun yang diinginkan. Cukup sekali, login tersimpan.
-- **Manage**: ganti nama profile (ikon pensil), jadikan default (ikon bintang), atau hapus (ikon tempat sampah).
-- Profile default adalah akun yang terbuka kalau Claude dibuka dari Spotlight atau Dock. Namanya bisa diganti, dan statusnya bisa dipindah ke profile lain.
-- Hapus profile menghapus semua data lokalnya, tapi histori sesi Code disimpan dulu ke folder backup, satu backup per akun Claude (digabung, bukan diganti).
-- **Restore** (ikon panah melingkar di mode Manage) mengembalikan histori sesi Code dari backup ke profile mana pun.
+- A menu bar icon with no Dock icon and no main window. Click the icon to see a popup with your profiles.
+- Click a profile to open Claude Desktop with that account. The popup closes by itself.
+- A running profile shows a green dot and a **Show** button. Clicking it brings the existing window to the front (and restores it if it was minimized) instead of starting a second process.
+- **Add profile**: enter a name, click **Login**, and sign in with the account you want. You only do this once.
+- **Manage** mode has four buttons per profile: **Rename**, **Restore**, **Make default**, and **Remove**.
+- The default profile is the account that opens when you start Claude from Spotlight or the Dock. You can rename it and you can move the default to another profile.
+- Removing a profile deletes its local data, but its Code session history is saved first, as one backup per Claude account (merged, not replaced).
+- **Restore** puts a saved Code session history back into any profile.
+- The popup header shows the version and build id (for example `v0.1.1 (7f3843d)`). Include it in bug reports.
 
-## Kelebihan
+## Why use it
 
-- Tidak menyentuh kredensial. App tidak membaca password atau token. Ia hanya memilih folder data mana yang dipakai Claude Desktop.
-- Tidak perlu login ulang saat berpindah akun. Tiap profile menyimpan sesinya sendiri.
-- Akun yang sudah login di Claude Desktop tidak perlu dimigrasi. Profile default memakai folder aslinya.
-- Ringan. Native Swift/SwiftUI, tanpa dependensi pihak ketiga, tanpa Electron.
-- Penghapusan dijaga: hanya folder `Claude-<id>` yang boleh dihapus, ditolak selama Claude profile itu masih jalan, dan dibatalkan kalau backup gagal.
-- Tukar default memakai rename folder dengan rollback, bukan penyalinan.
+- It never touches your credentials. It does not read passwords or tokens. It only chooses which data folder Claude Desktop uses.
+- No re-login when switching accounts. Each profile keeps its own session.
+- Your existing Claude Desktop login needs no migration. The default profile uses the original folder.
+- Light. Native Swift and SwiftUI, no third-party dependencies, no Electron.
+- Deleting is guarded. Only `Claude-<id>` folders can be deleted, it is refused while that profile's Claude is running, and it is cancelled if the backup fails.
+- Making a profile the default is a folder rename with rollback, not a copy.
 
-## Cara kerja
+## How it works
 
-Claude Desktop adalah app Electron. App ini menjalankannya dengan `--user-data-dir=<folder>`, jadi tiap profile punya folder data sendiri:
+Claude Desktop is an Electron app. Keladi Hub launches it with `--user-data-dir=<folder>`, so each profile gets its own data folder:
 
-| Profile | Folder data |
+| Profile | Data folder |
 |---|---|
 | Default | `~/Library/Application Support/Claude` |
-| Lainnya | `~/Library/Application Support/Claude-<id>` |
+| Others | `~/Library/Application Support/Claude-<id>` |
 
-Folder dinamai dengan id acak, bukan nama, jadi ganti nama tidak memindahkan data.
+Folders are named with a random id, not the profile name, so renaming a profile never moves data.
 
-Daftar profile disimpan di `~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`. Backup histori Code ada di `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<id akun>/` (folder `Library` tersembunyi di Finder; buka lewat Go > Go to Folder).
+The profile list is stored in `~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`. Code session backups are in `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<account id>/`. The `Library` folder is hidden in Finder; open it with Go > Go to Folder.
 
 ## Build
 
-Butuh Xcode (command line tools cukup) dan macOS 14 atau lebih baru.
+Requires Xcode (the command line tools are enough) and macOS 14 or newer.
 
 ```bash
 ./build.sh
 open "build/Keladi Hub.app"
 ```
 
-`build.sh` membangun lewat SwiftPM, membuat `build/Keladi Hub.app` (menu bar saja, `LSUIElement`), dan menandatangani dengan ad-hoc signature. Untuk dibagikan ke orang lain perlu signing dan notarization sendiri.
+`build.sh` builds a universal binary with SwiftPM, creates `build/Keladi Hub.app` (menu bar only, `LSUIElement`), and signs it ad hoc. Set `SIGN_ID` to a code signing identity to sign with your own certificate. To share the app widely you need your own Developer ID signing and notarization.
 
-## Keterbatasan
+## Troubleshooting
 
-- Hanya macOS. Windows belum dibuat dan belum dites (lokasi Claude.exe dan kemungkinan paket MSIX belum dicek).
-- Config MCP per profile. Profile baru mulai tanpa MCP server.
-- Semua instance Claude memakai Dock icon yang sama, jadi window antar akun dibedakan dari akun di dalam Claude.
-- Window Claude yang sedang diminimize tidak dikembalikan oleh **Show**. Buka lewat Dock. Pemulihan lewat Accessibility API pernah dicoba, tapi build-nya dihapus macOS sebagai malware (alasan persisnya tidak diketahui), jadi dibuang.
-- Status login tidak dideteksi. Label **Login** berarti folder profile belum pernah dibuat, bukan bahwa login sudah berhasil.
-- Menghapus profile menghapus daftar sesi Code dan file di scratch workspace-nya. Transkrip di `~/.claude/projects` dipakai bersama semua profile dan tidak ikut terhapus. Restore dari backup terbukti untuk daftar sesi, belum untuk scratch workspace.
-- Tukar default memindahkan folder yang berisi login. Sesi Code yang memakai scratch workspace menyimpan path absolut ke folder lama, jadi sesi itu mungkin tidak bisa dibuka setelah tukar.
-- Belum dicek apakah memakai beberapa akun sesuai Terms of Service Anthropic. Baca dulu sebelum dipakai atau dibagikan.
+**macOS says the app "cannot be opened" or "could not be verified".**
+The app is not notarized. Try to open it once, then open System Settings > Privacy & Security, scroll down, and click **Open Anyway** next to Keladi Hub. Or build it from source.
 
-## Struktur
+**macOS removed the app and called it malware.**
+An early development build that used the Accessibility API was deleted by macOS as malware. The reason was never shown, and the current code does not use Accessibility. Unsigned or ad-hoc signed apps can trigger this kind of warning. If it happens to you, do not turn off macOS protection to work around it. Build the app from source and check the code yourself, and please open an issue with the exact message macOS showed.
 
-- `Sources/KeladiHub/Store.swift`: model, `profiles.json`, deteksi proses, launch dan fokus, hapus, backup, restore, tukar default.
-- `Sources/KeladiHub/ContentView.swift`: isi popup.
-- `Sources/KeladiHub/App.swift`: icon menu bar dan panel popup yang dipasang sendiri di bawah icon.
-- `assets/`: ikon app dan ikon menu bar, plus `make-icons.swift` yang menggambarnya (desain `captain`, `hub`, `pinwheel`, `leaf`).
-- `build.sh`: build dan bungkus jadi `.app`.
+**The menu bar icon is not visible.**
+The menu bar may be full, and macOS hides the icons that do not fit (this is common on Macs with a notch). Quit some other menu bar apps, or use a menu bar manager, and check again.
 
-## Catatan nama
+**A profile says "Login" even though I already signed in.**
+The label only means that the profile's data folder does not exist yet, which is true until Claude has been opened with it once. After the first launch it changes to **Open**. The app does not check whether the login actually succeeded.
 
-Nama folder data `ClaudeProfileSwitcher` di `~/Library/Application Support` dipertahankan dari nama app sebelumnya supaya profile dan backup yang sudah ada tetap terbaca.
+**Clicking Show does not bring back a minimized window.**
+The first time, macOS may ask whether Keladi Hub is allowed to control Claude. Allow it, then click **Show** again. You can change this later in System Settings > Privacy & Security > Automation.
 
-## Lisensi
+**"Claude is still open" when removing, restoring, or making a profile the default.**
+Close that profile's Claude window first. For **Make default**, close every Claude window from every profile, because two data folders are swapped. A window can be hidden or minimized, so check the Dock and Mission Control.
 
-MIT, lihat [LICENSE](LICENSE).
+**Restore did not bring back my sessions.**
+The target profile must have been opened at least once and its Claude closed before you restore. Restore merges the backup into the profile's folder. Code sessions that worked inside a scratch workspace may not open, because those sessions store the absolute path of the old folder. Keladi Hub rewrites those paths, but this is not guaranteed.
+
+**The app says "Remove the leftover folder Claude-swap-tmp first".**
+A previous **Make default** was interrupted. Open `~/Library/Application Support` in Finder. If a folder named `Claude` is missing and `Claude-swap-tmp` exists, rename `Claude-swap-tmp` back to `Claude`. If both exist, do not delete anything yet: open an issue and describe what you see.
+
+**Claude opens fullscreen for one profile and windowed for another.**
+Claude Desktop appears to remember the window state per data folder, so each profile has its own (this is observed, not documented). Change it in that profile's window and it should stay.
+
+**I opened Claude from Spotlight and got the wrong account.**
+Spotlight and the Dock always open the default profile (the `Claude` folder). Use **Make default** in Manage mode to change which account that is, or open the account you want from Keladi Hub.
+
+**I want to reset the profile list.**
+Quit Keladi Hub and delete `~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`. The `Claude-<id>` data folders and the backups are not touched, but the list starts empty and the old folders are no longer linked to a profile.
+
+**Reporting a bug.**
+Open an issue with the version line from the popup header, your macOS version, what you clicked, and what you expected.
+
+## Limitations
+
+- macOS only. Windows is not built or tested yet (the location of Claude.exe and a possible MSIX package are not checked).
+- MCP configuration is per profile. A new profile starts without MCP servers.
+- All Claude windows share one Dock icon, so you tell accounts apart by the account shown inside Claude.
+- Login status is not detected (see the **Login** note above).
+- Removing a profile deletes its Code session list and scratch workspace files. The transcripts in `~/.claude/projects` are shared by all profiles and are not deleted. Restoring the session list from a backup is proven; restoring scratch workspaces is not.
+- Making a profile the default moves the folder that holds the login. Code sessions that used a scratch workspace store the absolute path of the old folder, so they may not open after a swap.
+- It is not checked whether using several accounts fits Anthropic's Terms of Service. Read the terms before you use or share this.
+
+## Project layout
+
+- `Sources/KeladiHub/Store.swift`: model, `profiles.json`, process detection, launch and focus, remove, backup, restore, swap default.
+- `Sources/KeladiHub/ContentView.swift`: the popup content.
+- `Sources/KeladiHub/App.swift`: the menu bar icon and the popup panel, placed under the icon.
+- `assets/`: the app icon and menu bar icon, plus `make-icons.swift`, which draws them (designs `captain`, `hub`, `pinwheel`, `leaf`).
+- `build.sh`: builds and packages the `.app`.
+
+## About the name
+
+The data folder `ClaudeProfileSwitcher` in `~/Library/Application Support` keeps the name of an earlier version of the app so that existing profiles and backups stay readable.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
 
 ## Disclaimer
 
-Keladi Hub bukan produk resmi Anthropic dan tidak berafiliasi, didukung, atau disponsori oleh Anthropic. "Claude" adalah merek dagang Anthropic. App ini hanya membuka Claude Desktop yang sudah terpasang dengan folder data yang berbeda.
+Keladi Hub is not an official Anthropic product and is not affiliated with, endorsed by, or sponsored by Anthropic. "Claude" is a trademark of Anthropic. This app only launches an already installed Claude Desktop with a different data folder.
