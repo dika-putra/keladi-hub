@@ -20,6 +20,15 @@ Download `Keladi-Hub-<version>-macOS.dmg` from the Releases page, open it, and d
 
 The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: try to launch the app, then go to System Settings > Privacy & Security and click **Open Anyway**. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the DMG.
 
+## Uninstall
+
+1. If you turned on **Start at login**, turn it off in the popup first. A login item that is left behind may stay listed in System Settings > General > Login Items (unverified); you can also remove it there by hand.
+2. Quit Keladi Hub (the power button in the popup) and move `Keladi Hub.app` to the Trash.
+
+This does not touch your Claude data. Your accounts stay signed in, and the profile list, the default profile name, and the backups are kept in `~/Library/Application Support/ClaudeProfileSwitcher/`. If you install Keladi Hub again, everything is still there. The default profile always exists, because it is built in.
+
+To remove everything, also delete `~/Library/Application Support/ClaudeProfileSwitcher/`. That deletes the profile list, the default profile's custom name, and all Code session backups. The data folders `Claude-<id>` stay on disk, but nothing is linked to them any more, so you can delete them by hand if you no longer need those accounts. Never delete the `Claude` folder unless you want Claude Desktop itself to start over.
+
 ## Features
 
 - A menu bar icon with no Dock icon and no main window. Click the icon to see a popup with your profiles.
