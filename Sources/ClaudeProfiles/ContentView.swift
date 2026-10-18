@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var store: Store
+    let close: () -> Void
     @State private var managing = false
     @State private var adding = false
     @State private var newName = ""
@@ -9,45 +10,19 @@ struct ContentView: View {
     @State private var renameText = ""
     @State private var removing: Profile?
     @State private var makingDefault: Profile?
-    @State private var errorMessage: String?
+    @State private var restoring: Profile?
+    @State private var message: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(store.all) { p in row(p) }
             Divider().padding(.vertical, 4)
             if let p = removing {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Remove \(p.name)?").font(.headline)
-                    if store.runningPIDs[p.id] != nil {
-                        Text("Claude is still open with this profile. Close that Claude window first, then remove it.")
-                            .font(.caption).foregroundStyle(.orange)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Button("OK") { removing = nil }
-                    } else {
-                        Text("Deletes this profile's login, MCP config and cache. Code session history is copied to ~/Library/Application Support/ClaudeProfileSwitcher/Backups first. Chats on claude.ai are not affected.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Button("Remove and delete all local data") { store.remove(p, deleteData: true); removing = nil }
-                            .foregroundStyle(.red)
-                        Button("Cancel") { removing = nil }
-                    }
-                }
+                removePanel(p)
             } else if let p = makingDefault {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Make \(p.name) the default?").font(.headline)
-                    if let msg = errorMessage {
-                        Text(msg).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
-                        Button("OK") { makingDefault = nil; errorMessage = nil }
-                    } else {
-                        Text("Claude opened from Spotlight or the Dock will open this account. The two profiles swap data folders. Close all Claude windows first.")
-                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        Button("Make default") {
-                            errorMessage = store.makeDefault(p)
-                            if errorMessage == nil { makingDefault = nil }
-                        }
-                        Button("Cancel") { makingDefault = nil }
-                    }
-                }
+                defaultPanel(p)
+            } else if let p = restoring {
+                restorePanel(p)
             } else if adding {
                 HStack {
                     TextField("Profile name", text: $newName).onSubmit(commitAdd)
@@ -65,9 +40,65 @@ struct ContentView: View {
         }
         .buttonStyle(.borderless)
         .padding(12)
-        .frame(width: 280)
-        .background(PopupAnchor(trigger: "\(store.all.count)-\(managing)-\(adding)-\(removing?.id ?? "")-\(makingDefault?.id ?? "")-\(errorMessage ?? "")-\(store.runningPIDs.count)"))
-        .onAppear { store.refreshRunning() }
+        .frame(width: 300)
+    }
+
+    private func removePanel(_ p: Profile) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Remove \(p.name)?").font(.headline)
+            if store.runningPIDs[p.id] != nil {
+                note("Claude is still open with this profile. Close that Claude window first, then remove it.", .orange)
+                Button("OK") { removing = nil }
+            } else {
+                note("Deletes this profile's login, MCP config and cache. Code session history is saved to ~/Library/Application Support/ClaudeProfileSwitcher/Backups first (one backup per Claude account). Chats on claude.ai are not affected.", .secondary)
+                Button("Remove and delete all local data") { store.remove(p, deleteData: true); removing = nil }
+                    .foregroundStyle(.red)
+                Button("Cancel") { removing = nil }
+            }
+        }
+    }
+
+    private func defaultPanel(_ p: Profile) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Make \(p.name) the default?").font(.headline)
+            if let msg = message {
+                note(msg, .orange)
+                Button("OK") { makingDefault = nil; message = nil }
+            } else {
+                note("Claude opened from Spotlight or the Dock will open this account. The two profiles swap data folders. Close all Claude windows first.", .secondary)
+                Button("Make default") {
+                    message = store.makeDefault(p)
+                    if message == nil { makingDefault = nil }
+                }
+                Button("Cancel") { makingDefault = nil }
+            }
+        }
+    }
+
+    private func restorePanel(_ p: Profile) -> some View {
+        let backups = store.backups()
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Restore into \(p.name)").font(.headline)
+            if let msg = message {
+                note(msg, msg.hasPrefix("Restored") ? .green : .orange)
+                Button("OK") { restoring = nil; message = nil }
+            } else if backups.isEmpty {
+                note("No backups yet. A backup is made when a profile is removed.", .secondary)
+                Button("OK") { restoring = nil }
+            } else {
+                note("Pick a backup. Its Code sessions are merged into this profile. Close this profile's Claude window first.", .secondary)
+                ForEach(backups.prefix(6)) { b in
+                    Button("\(b.profileName) · account \(b.accountID.prefix(8)) · \(pretty(b.savedAt))") {
+                        message = store.restore(b, to: p) ?? "Restored. Open the profile to check the sessions."
+                    }
+                }
+                Button("Cancel") { restoring = nil }
+            }
+        }
+    }
+
+    private func note(_ text: String, _ color: Color) -> some View {
+        Text(text).font(.caption).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
     }
 
     // Launching is only possible outside Manage mode, so rename/remove never share a row with an "open" tap target.
@@ -88,14 +119,18 @@ struct ContentView: View {
                     Text(title).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Button { renaming = p; renameText = p.name } label: { Image(systemName: "pencil") }
+                    .help("Rename")
+                Button { message = nil; restoring = p } label: { Image(systemName: "arrow.counterclockwise") }
+                    .help("Restore a backup")
                 if !isDefault {
                     Button {
                         store.refreshRunning()
-                        errorMessage = store.runningPIDs.isEmpty ? nil : "Claude is still open. Close all Claude windows first, then make this profile the default."
+                        message = store.runningPIDs.isEmpty ? nil : "Claude is still open. Close all Claude windows first, then make this profile the default."
                         makingDefault = p
                     } label: { Image(systemName: "star") }
                         .help("Make default")
                     Button { store.refreshRunning(); removing = p } label: { Image(systemName: "trash") }
+                        .help("Remove")
                 }
             }
             .padding(.vertical, 6)
@@ -103,9 +138,15 @@ struct ContentView: View {
         } else {
             LaunchRow(title: title, running: running, actionLabel: running ? "Show" : (store.needsLogin(p) ? "Login" : "Open")) {
                 store.launch(p)
-                NSApp.keyWindow?.close()
+                close()
             }
         }
+    }
+
+    private func pretty(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM HH:mm"
+        return f.string(from: date)
     }
 
     private func finishManage() {

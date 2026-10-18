@@ -53,14 +53,14 @@ Satu aksi: "Remove and delete all local data", dengan penjelasan di panel konfir
 
 ### Backup histori Code sebelum hapus
 
-Sebelum folder dihapus, app menyalin ke folder tersembunyi:
-`~/Library/Application Support/ClaudeProfileSwitcher/Backups/<nama>-<id>-<yyyyMMdd-HHmmss>/`
-Isi backup: `claude-code-sessions/`, `scratch-workspaces/`, `git-worktrees.json` (yang ada saja). Kalau penyalinan gagal, profile dan datanya tidak dihapus.
-Folder `Library` tersembunyi di Finder: buka lewat Go > Go to Folder, atau `open ~/Library/Application\ Support/ClaudeProfileSwitcher/Backups`.
+Satu backup per akun Claude, bukan per hapus. Kunci backup adalah id akun, yaitu nama folder di bawah `claude-code-sessions/` (contoh `d3ad2724-...`). Email tidak dipakai karena tidak tersimpan di folder profile (tidak ada field email di config atau file sesi yang diperiksa), sedangkan id akun otomatis ada, stabil, dan unik.
+Lokasi (folder `Library` tersembunyi di Finder): `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<id akun>/`
+Isi: `claude-code-sessions/<id akun>/`, `scratch-workspaces/<id akun>/`, `git-worktrees.json`, `info.json` (nama profile, waktu simpan, folder sumber).
+Aturan update: backup digabung (merge), bukan diganti. Sesi baru ditambah, sesi dengan id yang sama ditimpa versi terbaru, sesi yang sudah ada di backup tidak dihapus. Ini sengaja: mengganti backup dengan versi terbaru saja bisa menghapus sesi lama kalau profile terakhir yang dihapus lebih sedikit isinya. Kalau mau replace murni, itu perubahan kecil di `backupHistory`.
+Kalau penyalinan gagal, profile dan datanya tidak dihapus. Backup versi pertama (folder `<nama>-<id>-<tanggal>`) tidak dikenali app dan tidak dimigrasi; salin manual dengan `cp -R <backup>/. <folder profile>/`.
 
-Restore manual (terbukti 2026-10-17 untuk `claude-code-sessions` dan `git-worktrees.json`: sesi Code lama muncul lagi di profile baru; `scratch-workspaces` belum diuji): tambah profile baru, buka sekali lalu tutup supaya foldernya terbentuk, salin isi backup ke `~/Library/Application Support/Claude-<id baru>/`, buka lagi.
-Risiko yang tersisa untuk sesi di scratch workspace: file sesi menyimpan `cwd` absolut yang menunjuk ke folder profile lama (contoh `.../Claude/scratch-workspaces/...`) dan id akun, jadi sesi di scratch workspace mungkin tidak bisa dibuka. Transkrip asli tetap bisa dibuka lewat `claude --resume` karena ada di `~/.claude/projects`.
-Backup tidak dibersihkan otomatis. Hapus manual kalau tidak dibutuhkan.
+Restore: Manage > ikon panah melingkar > pilih backup akun. Syarat: profile tujuan pernah dibuka sekali dan Claude-nya tertutup. App menggabungkan isi backup ke folder profile lalu menulis ulang path absolut lama (dari `info.json`) di file sesi ke path profile tujuan.
+Terbukti (restore manual, 2026-10-17): daftar sesi Code muncul lagi di profile baru. Belum terbukti: restore lewat tombol, dan sesi di scratch workspace.
 
 ## Set as default
 

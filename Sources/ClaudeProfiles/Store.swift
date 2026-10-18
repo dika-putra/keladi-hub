@@ -6,6 +6,22 @@ struct Profile: Codable, Identifiable, Equatable {
     var name: String
 }
 
+// One backup per Claude account (account id = folder name under claude-code-sessions), updated on every profile removal.
+struct Backup: Identifiable {
+    let url: URL
+    let accountID: String
+    let profileName: String
+    let savedAt: Date
+    fileprivate let sourceDir: String
+    var id: String { accountID }
+}
+
+private struct BackupInfo: Codable {
+    var profileName: String
+    var savedAt: Date
+    var sourceDir: String
+}
+
 private struct Config: Codable {
     var defaultName: String
     var profiles: [Profile]
@@ -109,20 +125,94 @@ final class Store: ObservableObject {
         return nil
     }
 
-    // Copies Code-session history to Backups/<name>-<id>-<timestamp> before a profile's data is deleted.
+    private var backupsDir: URL { configDir.appendingPathComponent("Backups") }
+
+    // Newest first. Folders without info.json (backups from the first version) are ignored.
+    func backups() -> [Backup] {
+        let dec = JSONDecoder()
+        dec.dateDecodingStrategy = .iso8601
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: backupsDir.path)) ?? []
+        return names.compactMap { name -> Backup? in
+            let dir = backupsDir.appendingPathComponent(name)
+            guard let data = try? Data(contentsOf: dir.appendingPathComponent("info.json")),
+                  let info = try? dec.decode(BackupInfo.self, from: data) else { return nil }
+            return Backup(url: dir, accountID: name, profileName: info.profileName, savedAt: info.savedAt, sourceDir: info.sourceDir)
+        }.sorted { $0.savedAt > $1.savedAt }
+    }
+
+    // Merges the backup into the profile's data folder, then rewrites absolute paths that still point at the old
+    // profile folder. Returns an error message, or nil.
+    func restore(_ b: Backup, to p: Profile) -> String? {
+        refreshRunning()
+        guard runningPIDs[p.id] == nil else { return "Close this profile's Claude window first." }
+        let dest = dataDir(p)
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: dest.path) else { return "Open and log in to this profile once first." }
+        do {
+            for part in ["claude-code-sessions", "scratch-workspaces"] where fm.fileExists(atPath: b.url.appendingPathComponent(part).path) {
+                try copyMerge(b.url.appendingPathComponent(part), into: dest.appendingPathComponent(part))
+            }
+            let wt = b.url.appendingPathComponent("git-worktrees.json")
+            let wtDest = dest.appendingPathComponent("git-worktrees.json")
+            if fm.fileExists(atPath: wt.path), !fm.fileExists(atPath: wtDest.path) { try fm.copyItem(at: wt, to: wtDest) }
+        } catch {
+            return "Restore failed: \(error.localizedDescription)"
+        }
+        rewritePaths(in: dest, from: b.sourceDir, to: dest.path)
+        return nil
+    }
+
+    // cp -R src/. dst/ : creates dst, keeps files that only exist in dst, overwrites files that exist in both.
+    private func copyMerge(_ src: URL, into dst: URL) throws {
+        try FileManager.default.createDirectory(at: dst, withIntermediateDirectories: true)
+        let cp = Process()
+        cp.executableURL = URL(fileURLWithPath: "/bin/cp")
+        cp.arguments = ["-R", src.path + "/.", dst.path + "/"]
+        try cp.run()
+        cp.waitUntilExit()
+        guard cp.terminationStatus == 0 else { throw CocoaError(.fileWriteUnknown) }
+    }
+
+    // Session files store the absolute path of the folder they were created in (e.g. scratch workspaces).
+    private func rewritePaths(in dest: URL, from old: String, to new: String) {
+        guard old != new else { return }
+        let fm = FileManager.default
+        var files = [dest.appendingPathComponent("git-worktrees.json")]
+        if let e = fm.enumerator(at: dest.appendingPathComponent("claude-code-sessions"), includingPropertiesForKeys: nil) {
+            files += e.compactMap { $0 as? URL }.filter { $0.pathExtension == "json" }
+        }
+        for f in files {
+            guard let text = try? String(contentsOf: f, encoding: .utf8), text.contains(old) else { continue }
+            try? text.replacingOccurrences(of: old, with: new).write(to: f, atomically: true, encoding: .utf8)
+        }
+    }
+
+    // Merges Code-session history into Backups/<accountID>/ for every account found in the profile folder,
+    // before the folder is deleted. Sessions are only added or updated, never removed from a backup.
     private func backupHistory(of p: Profile) -> Bool {
         let fm = FileManager.default
         let src = dataDir(p)
-        let items = ["claude-code-sessions", "scratch-workspaces", "git-worktrees.json"]
-            .filter { fm.fileExists(atPath: src.appendingPathComponent($0).path) }
-        if items.isEmpty { return true }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyyMMdd-HHmmss"
-        let label = p.name.filter { $0.isLetter || $0.isNumber }
-        let dest = configDir.appendingPathComponent("Backups/\(label)-\(p.id)-\(fmt.string(from: Date()))")
+        let sessions = src.appendingPathComponent("claude-code-sessions")
+        let accounts = ((try? fm.contentsOfDirectory(atPath: sessions.path)) ?? []).filter { !$0.hasPrefix(".") }
+        let enc = JSONEncoder()
+        enc.dateEncodingStrategy = .iso8601
         do {
-            try fm.createDirectory(at: dest, withIntermediateDirectories: true)
-            for item in items { try fm.copyItem(at: src.appendingPathComponent(item), to: dest.appendingPathComponent(item)) }
+            for acct in accounts {
+                let dest = backupsDir.appendingPathComponent(acct)
+                try copyMerge(sessions.appendingPathComponent(acct), into: dest.appendingPathComponent("claude-code-sessions/\(acct)"))
+                let scratch = src.appendingPathComponent("scratch-workspaces/\(acct)")
+                if fm.fileExists(atPath: scratch.path) {
+                    try copyMerge(scratch, into: dest.appendingPathComponent("scratch-workspaces/\(acct)"))
+                }
+                let wt = src.appendingPathComponent("git-worktrees.json")
+                let wtDest = dest.appendingPathComponent("git-worktrees.json")
+                if fm.fileExists(atPath: wt.path) {
+                    try? fm.removeItem(at: wtDest)
+                    try fm.copyItem(at: wt, to: wtDest)
+                }
+                let info = BackupInfo(profileName: p.name, savedAt: Date(), sourceDir: src.path)
+                try enc.encode(info).write(to: dest.appendingPathComponent("info.json"))
+            }
             return true
         } catch {
             return false

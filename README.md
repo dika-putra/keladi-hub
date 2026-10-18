@@ -12,7 +12,8 @@ Status: macOS saja (Swift native). Versi Windows akan dibuat di repo terpisah. R
 - **+ Add profile**: beri nama, lalu klik **Login** dan masuk dengan akun yang diinginkan. Cukup sekali, login tersimpan.
 - **Manage**: ganti nama profile (ikon pensil), jadikan default (ikon bintang), atau hapus (ikon tempat sampah).
 - Profile default adalah akun yang terbuka kalau Claude dibuka dari Spotlight atau Dock. Namanya bisa diganti, dan statusnya bisa dipindah ke profile lain.
-- Hapus profile menghapus semua data lokalnya, tapi histori sesi Code disalin dulu ke folder backup.
+- Hapus profile menghapus semua data lokalnya, tapi histori sesi Code disimpan dulu ke folder backup, satu backup per akun Claude (digabung, bukan diganti).
+- **Restore** (ikon panah melingkar di mode Manage) mengembalikan histori sesi Code dari backup ke profile mana pun.
 
 ## Kelebihan
 
@@ -34,7 +35,7 @@ Claude Desktop adalah app Electron. App ini menjalankannya dengan `--user-data-d
 
 Folder dinamai dengan id acak, bukan nama, jadi ganti nama tidak memindahkan data.
 
-Daftar profile disimpan di `~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`. Backup histori Code ada di `~/Library/Application Support/ClaudeProfileSwitcher/Backups/` (folder `Library` tersembunyi di Finder; buka lewat Go > Go to Folder).
+Daftar profile disimpan di `~/Library/Application Support/ClaudeProfileSwitcher/profiles.json`. Backup histori Code ada di `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<id akun>/` (folder `Library` tersembunyi di Finder; buka lewat Go > Go to Folder).
 
 ## Build
 
