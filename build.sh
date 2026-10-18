@@ -14,7 +14,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>CFBundleName</key><string>Keladi Hub</string>
-<key>CFBundleIdentifier</key><string>com.dikaputra.keladihub</string>
+<key>CFBundleIdentifier</key><string>com.dienn.keladihub</string>
 <key>CFBundleExecutable</key><string>KeladiHub</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
