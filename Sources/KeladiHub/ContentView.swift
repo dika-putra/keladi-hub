@@ -1,5 +1,13 @@
 import SwiftUI
 
+// "v0.1.0 (a1b2c3d)": release version and build id, for bug reports.
+private let versionLabel: String = {
+    let info = Bundle.main.infoDictionary
+    let version = info?["CFBundleShortVersionString"] as? String ?? "dev"
+    let build = info?["CFBundleVersion"] as? String ?? ""
+    return build.isEmpty ? "v\(version)" : "v\(version) (\(build))"
+}()
+
 private let avatarColors: [Color] = [
     Color(red: 0.85, green: 0.43, blue: 0.27), Color(red: 0.20, green: 0.42, blue: 0.33), Color(red: 0.25, green: 0.43, blue: 0.69),
     Color(red: 0.89, green: 0.65, blue: 0.18), Color(red: 0.55, green: 0.30, blue: 0.52),
@@ -40,6 +48,7 @@ struct ContentView: View {
             } else {
                 footer
             }
+            credits
         }
         .padding(14)
         .frame(width: 320)
@@ -51,12 +60,22 @@ struct ContentView: View {
     private var header: some View {
         HStack {
             Text("Keladi Hub").font(.headline)
+            Text(versionLabel).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
             Spacer()
             Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power") }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .help("Quit Keladi Hub")
         }
+    }
+
+    private var credits: some View {
+        HStack(spacing: 4) {
+            Text("by Dika Putra ·").foregroundStyle(.secondary)
+            Link("github.com/dika-putra/keladi-hub", destination: URL(string: "https://github.com/dika-putra/keladi-hub")!)
+        }
+        .font(.caption2)
+        .frame(maxWidth: .infinity)
     }
 
     private var footer: some View {

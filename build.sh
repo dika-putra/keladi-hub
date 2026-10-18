@@ -5,6 +5,9 @@ cd "$(dirname "$0")"
 # Universal binary (Apple Silicon and Intel).
 swift build -c release --arch arm64 --arch x86_64
 APP="build/Keladi Hub.app"
+# Build id shown in the popup header: short git hash, "-dirty" when there are uncommitted changes.
+BUILD="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+git diff --quiet HEAD -- 2>/dev/null || BUILD="$BUILD-dirty"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/KeladiHub" "$APP/Contents/MacOS/"
@@ -19,7 +22,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>CFBundleExecutable</key><string>KeladiHub</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleVersion</key><string>$BUILD</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
