@@ -8,7 +8,12 @@ private let avatarColors: [Color] = [
 struct ContentView: View {
     @EnvironmentObject var store: Store
     let close: () -> Void
-    @State private var managing = false
+    @State private var managing: Bool
+
+    init(close: @escaping () -> Void, startManaging: Bool = false) {
+        self.close = close
+        _managing = State(initialValue: startManaging)
+    }
     @State private var adding = false
     @State private var newName = ""
     @State private var renaming: Profile?
@@ -38,6 +43,7 @@ struct ContentView: View {
         }
         .padding(14)
         .frame(width: 320)
+        .focusEffectDisabled()
     }
 
     // MARK: Header and footer

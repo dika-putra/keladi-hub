@@ -34,16 +34,26 @@ private let appSupport = FileManager.default.urls(for: .applicationSupportDirect
 final class Store: ObservableObject {
     static let defaultProfile = Profile(id: "default", name: "Default")
 
-    @Published private(set) var defaultName = "Evermos"
+    @Published private(set) var defaultName = "Default"
     @Published private(set) var profiles: [Profile] = []
     @Published private(set) var runningPIDs: [String: pid_t] = [:]
 
     private let configDir = appSupport.appendingPathComponent("ClaudeProfileSwitcher")
     private var configFile: URL { configDir.appendingPathComponent("profiles.json") }
 
-    init() {
-        load()
-        refreshRunning()
+    // Demo data for README screenshots (`--screenshot`): never reads or writes the real config.
+    private let demo: Bool
+
+    init(demo: Bool = false) {
+        self.demo = demo
+        if demo {
+            defaultName = "Personal"
+            profiles = [Profile(id: "b2", name: "Work"), Profile(id: "e5", name: "Side project")]
+            runningPIDs = ["default": 1, "b2": 2]
+        } else {
+            load()
+            refreshRunning()
+        }
     }
 
     var all: [Profile] { [Profile(id: Store.defaultProfile.id, name: defaultName)] + profiles }
@@ -58,7 +68,8 @@ final class Store: ObservableObject {
 
     // A profile's folder only exists after Claude was launched with it once, so no folder means "not logged in yet".
     func needsLogin(_ p: Profile) -> Bool {
-        p.id != Store.defaultProfile.id && !FileManager.default.fileExists(atPath: dataDir(p).path)
+        if demo { return p.id == "e5" }
+        return p.id != Store.defaultProfile.id && !FileManager.default.fileExists(atPath: dataDir(p).path)
     }
 
     func add(name: String) {
@@ -222,6 +233,7 @@ final class Store: ObservableObject {
 
     // Main Claude processes only (not Helpers). Matches by --user-data-dir flag.
     func refreshRunning() {
+        if demo { return }
         objectWillChange.send()
         let out = run("/bin/ps", ["-axo", "pid=,command="])
         var found: [String: pid_t] = [:]
@@ -281,6 +293,7 @@ final class Store: ObservableObject {
     }
 
     private func save() {
+        if demo { return }
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
         if let data = try? JSONEncoder().encode(Config(defaultName: defaultName, profiles: profiles)) {
             try? data.write(to: configFile)

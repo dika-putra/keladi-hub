@@ -24,7 +24,7 @@ private final class Panel: NSPanel {
 // Own panel under the status item instead of MenuBarExtra/NSPopover: both re-anchored wrongly when the content size changed.
 // The anchor is read once, when the icon is clicked, and every resize is positioned from it.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let store = Store()
+    private let store = Store(demo: CommandLine.arguments.contains("--screenshot"))
     private let panel = Panel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 100),
                               styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
     private let host: NSHostingController<AnyView>
@@ -71,6 +71,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.onResignKey = { [weak self] in self?.hide() }
 
+        if let i = CommandLine.arguments.firstIndex(of: "--screenshot"), i + 1 < CommandLine.arguments.count {
+            captureScreenshots(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+        }
+
         sizeObserver = host.observe(\.preferredContentSize, options: [.new]) { [weak self] _, _ in
             DispatchQueue.main.async { self?.resize() }
         }
@@ -86,6 +90,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return NSImage(systemSymbolName: "person.2.circle", accessibilityDescription: "Keladi Hub")
     }
 
+    // README screenshots: shows the panel with demo data over a plain backdrop (so the blur never samples the real
+    // desktop), captures this app's own window, and quits. Usage: KeladiHub --screenshot <dir>
+    private func captureScreenshots(to dir: URL) {
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let backdrop = NSWindow(contentRect: NSRect(x: 500, y: 300, width: 460, height: 640), styleMask: .borderless, backing: .buffered, defer: false)
+        backdrop.backgroundColor = NSColor(white: 0.94, alpha: 1)
+        backdrop.level = .floating
+        backdrop.orderFrontRegardless()
+        anchor = NSRect(x: 710, y: 930, width: 32, height: 24)
+        anchorScreen = NSScreen.main
+
+        func snap(_ name: String) {
+            guard let image = CGWindowListCreateImage(.null, .optionIncludingWindow, CGWindowID(panel.windowNumber),
+                                                      [.boundsIgnoreFraming, .bestResolution]) else { return }
+            try? NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent(name))
+        }
+        func show() {
+            resize()
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+        panel.makeFirstResponder(nil)  // no focus ring on the first button
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { show() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { snap("popup.png") }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            self.host.rootView = AnyView(ContentView(close: {}, startManaging: true).environmentObject(self.store).id("manage"))
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { show() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { snap("manage.png") }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.4) { NSApp.terminate(nil) }
+    }
+
     @objc private func toggle() {
         // Clicking the icon while the panel is open first resigns key (hide), then lands here; do not reopen it.
         if panel.isVisible || Date().timeIntervalSince(lastHidden) < 0.25 {
@@ -99,6 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         resize()
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
+        panel.makeFirstResponder(nil)  // no focus ring on the first button
     }
 
     private func hide() {

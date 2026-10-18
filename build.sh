@@ -2,11 +2,12 @@
 # Builds build/Keladi Hub.app (menu bar only, no Dock icon).
 set -euo pipefail
 cd "$(dirname "$0")"
-swift build -c release
+# Universal binary (Apple Silicon and Intel).
+swift build -c release --arch arm64 --arch x86_64
 APP="build/Keladi Hub.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
-cp .build/release/KeladiHub "$APP/Contents/MacOS/"
+cp "$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/KeladiHub" "$APP/Contents/MacOS/"
 mkdir -p "$APP/Contents/Resources"
 cp assets/AppIcon.icns assets/MenuBarIcon.png "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<PLIST

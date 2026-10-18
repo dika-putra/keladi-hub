@@ -4,6 +4,16 @@ App menu bar macOS untuk mengelola dan berpindah antar profile akun Claude Deskt
 
 Status: macOS saja (Swift native). Versi Windows akan dibuat di repo terpisah. Rencana dan hasil riset ada di [PLAN.md](PLAN.md).
 
+![Daftar profile](assets/screenshots/popup.png) ![Mode Manage](assets/screenshots/manage.png)
+
+Screenshot memakai data contoh (dibuat dengan `KeladiHub --screenshot <folder>`), bukan akun sungguhan.
+
+## Instalasi
+
+Unduh `Keladi-Hub-<versi>-macOS.zip` dari halaman Releases, buka zip-nya, lalu pindahkan `Keladi Hub.app` ke folder Applications. Butuh macOS 14 atau lebih baru (Apple Silicon dan Intel).
+
+App ini **belum ditandatangani Developer ID dan belum di-notarize oleh Apple**, jadi macOS akan memblokirnya saat pertama dibuka. Untuk membukanya: coba buka app, lalu di System Settings > Privacy & Security tekan **Open Anyway**. Kalau tidak mau memercayai binary ini, bangun dari kode sumber (lihat Build di bawah). Checksum SHA-256 tiap rilis ada di halaman Releases.
+
 ## Fitur
 
 - Icon di menu bar, tanpa Dock icon dan tanpa window utama. Klik icon, muncul popup berisi daftar profile.

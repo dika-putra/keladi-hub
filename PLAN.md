@@ -53,7 +53,7 @@ Satu aksi: "Remove and delete all local data", dengan penjelasan di panel konfir
 
 ### Backup histori Code sebelum hapus
 
-Satu backup per akun Claude, bukan per hapus. Kunci backup adalah id akun, yaitu nama folder di bawah `claude-code-sessions/` (contoh `d3ad2724-...`). Email tidak dipakai karena tidak tersimpan di folder profile (tidak ada field email di config atau file sesi yang diperiksa), sedangkan id akun otomatis ada, stabil, dan unik.
+Satu backup per akun Claude, bukan per hapus. Kunci backup adalah id akun, yaitu nama folder di bawah `claude-code-sessions/` (contoh `xxxxxxxx-xxxx-...`). Email tidak dipakai karena tidak tersimpan di folder profile (tidak ada field email di config atau file sesi yang diperiksa), sedangkan id akun otomatis ada, stabil, dan unik.
 Lokasi (folder `Library` tersembunyi di Finder): `~/Library/Application Support/ClaudeProfileSwitcher/Backups/<id akun>/`
 Isi: `claude-code-sessions/<id akun>/`, `scratch-workspaces/<id akun>/`, `git-worktrees.json`, `info.json` (nama profile, waktu simpan, folder sumber).
 Aturan update: backup digabung (merge), bukan diganti. Sesi baru ditambah, sesi dengan id yang sama ditimpa versi terbaru, sesi yang sudah ada di backup tidak dihapus. Ini sengaja: mengganti backup dengan versi terbaru saja bisa menghapus sesi lama kalau profile terakhir yang dihapus lebih sedikit isinya. Kalau mau replace murni, itu perubahan kecil di `backupHistory`.
