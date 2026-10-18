@@ -81,6 +81,10 @@ open "build/Keladi Hub.app"
 
 Nama folder data `ClaudeProfileSwitcher` di `~/Library/Application Support` dipertahankan dari nama app sebelumnya supaya profile dan backup yang sudah ada tetap terbaca.
 
+## Lisensi
+
+MIT, lihat [LICENSE](LICENSE).
+
 ## Disclaimer
 
 Keladi Hub bukan produk resmi Anthropic dan tidak berafiliasi, didukung, atau disponsori oleh Anthropic. "Claude" adalah merek dagang Anthropic. App ini hanya membuka Claude Desktop yang sudah terpasang dengan folder data yang berbeda.
