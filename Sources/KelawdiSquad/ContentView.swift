@@ -62,13 +62,13 @@ struct ContentView: View {
 
     private var header: some View {
         HStack {
-            Text("Keladi Hub").font(.headline)
+            Text("Kelawdi Squad").font(.headline)
             Text(versionLabel).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
             Spacer()
             Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power") }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .help("Quit Keladi Hub")
+                .help("Quit Kelawdi Squad")
         }
     }
 
@@ -84,7 +84,7 @@ struct ContentView: View {
                         loginMessage = LoginItem.set(on)
                         loginTick += 1
                         if loginMessage == nil, LoginItem.needsApproval {
-                            loginMessage = "Approve Keladi Hub in System Settings > General > Login Items."
+                            loginMessage = "Approve Kelawdi Squad in System Settings > General > Login Items."
                         }
                     }))
                     .labelsHidden()
@@ -100,7 +100,7 @@ struct ContentView: View {
     private var credits: some View {
         HStack(spacing: 4) {
             Text("by Dika Putra ·").foregroundStyle(.secondary)
-            Link("github.com/dika-putra/keladi-hub", destination: URL(string: "https://github.com/dika-putra/keladi-hub")!)
+            Link("github.com/dika-putra/kelawdi-squad", destination: URL(string: "https://github.com/dika-putra/kelawdi-squad")!)
         }
         .font(.caption2)
         .frame(maxWidth: .infinity)

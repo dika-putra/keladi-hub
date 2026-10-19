@@ -87,11 +87,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             image.isTemplate = true
             return image
         }
-        return NSImage(systemSymbolName: "person.2.circle", accessibilityDescription: "Keladi Hub")
+        return NSImage(systemSymbolName: "person.2.circle", accessibilityDescription: "Kelawdi Squad")
     }
 
     // README screenshots: shows the panel with demo data over a plain backdrop (so the blur never samples the real
-    // desktop), captures this app's own window, and quits. Usage: KeladiHub --screenshot <dir>
+    // desktop), captures this app's own window, and quits. Usage: KelawdiSquad --screenshot <dir>
     private func captureScreenshots(to dir: URL) {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let backdrop = NSWindow(contentRect: NSRect(x: 500, y: 300, width: 460, height: 640), styleMask: .borderless, backing: .buffered, defer: false)
