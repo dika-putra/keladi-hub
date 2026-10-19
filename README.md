@@ -18,7 +18,7 @@ A personal project, shared as is. Issues are read when time allows, and no suppo
 
 Download `Keladi-Hub-<version>-macOS.dmg` from the Releases page, open it, and drag `Keladi Hub.app` to the Applications folder. Requires macOS 14 or newer (Apple Silicon and Intel).
 
-The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: try to launch the app, then go to System Settings > Privacy & Security and click **Open Anyway**. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the DMG.
+The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: drag the app to Applications and try to launch it. macOS shows a dialog with only **Done** and **Move to Trash**; click **Done** (not Move to Trash). Then open System Settings > Privacy & Security, scroll to the very bottom, and click **Open Anyway** next to the message about Keladi Hub. The button only appears after you have tried to open the app, and it is not in the dialog itself. On newer macOS versions this step may look different (for example a switch that allows the app); check what your System Settings shows. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the DMG.
 
 ## Uninstall
 
@@ -78,7 +78,7 @@ open "build/Keladi Hub.app"
 ## Troubleshooting
 
 **macOS says the app "cannot be opened" or "could not be verified".**
-The app is not notarized. Try to open it once, then open System Settings > Privacy & Security, scroll down, and click **Open Anyway** next to Keladi Hub. Or build it from source.
+The app is not notarized. The dialog only offers **Done** and **Move to Trash**; click **Done**. Then open System Settings > Privacy & Security, scroll to the very bottom, and click **Open Anyway** next to Keladi Hub. If you do not see it, try to open the app again and look right after. Run it from the Applications folder, not from inside the DMG. The old Control-click > Open shortcut does not work on recent macOS versions. Or build it from source.
 
 **macOS removed the app and called it malware.**
 An early development build that used the Accessibility API was deleted by macOS as malware. The reason was never shown, and the current code does not use Accessibility. Unsigned or ad-hoc signed apps can trigger this kind of warning. If it happens to you, do not turn off macOS protection to work around it. Build the app from source and check the code yourself, and please open an issue with the exact message macOS showed.
