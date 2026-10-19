@@ -16,18 +16,24 @@ A personal project, shared as is. Issues are read when time allows, and no suppo
 
 ## Install
 
-Download `Kelawdi-Squad-<version>-macOS.dmg` from the Releases page, open it, and drag `Kelawdi Squad.app` to the Applications folder. Requires macOS 14 or newer (Apple Silicon and Intel).
+Requires macOS 14 or newer (Apple Silicon and Intel).
 
-The app is **not signed with a Developer ID and not notarized by Apple**, so macOS blocks it the first time you open it. To open it: drag the app to Applications and try to launch it. macOS shows a dialog with only **Done** and **Move to Trash**; click **Done** (not Move to Trash). Then open System Settings > Privacy & Security, scroll to the very bottom, and click **Open Anyway** next to the message about Kelawdi Squad. The button only appears after you have tried to open the app, and it is not in the dialog itself. On newer macOS versions this step may look different (for example a switch that allows the app); check what your System Settings shows. If you would rather not trust a prebuilt binary, build it from source (see Build below). Each release page lists the SHA-256 checksum of the DMG.
+1. Download the `.dmg` from the Releases page and open it.
+2. Drag **Kelawdi Squad** to the Applications folder.
+3. Open it from Applications. macOS blocks it because the app is not notarized. Click **Done** (not Move to Trash).
+4. Open System Settings > Privacy & Security, scroll to the bottom, click **Open Anyway**, and confirm.
+5. Open the app again. The icon appears in the menu bar.
+
+Prefer not to trust a prebuilt binary? Build it from source (see Build). Each release page lists the SHA-256 of the DMG.
 
 ## Uninstall
 
-1. If you turned on **Start at login**, turn it off in the popup first. A login item that is left behind may stay listed in System Settings > General > Login Items (unverified); you can also remove it there by hand.
-2. Quit Kelawdi Squad (the power button in the popup) and move `Kelawdi Squad.app` to the Trash.
+1. Turn off **Start at login** in the popup.
+2. Click the power button in the popup to quit, then move the app to the Trash.
 
-This does not touch your Claude data. Your accounts stay signed in, and the profile list, the default profile name, and the backups are kept in `~/Library/Application Support/ClaudeProfileSwitcher/`. If you install Kelawdi Squad again, everything is still there. The default profile always exists, because it is built in.
+Your Claude accounts stay signed in, and your profile list and backups are kept in `~/Library/Application Support/ClaudeProfileSwitcher/`, so a reinstall finds them.
 
-To remove everything, also delete `~/Library/Application Support/ClaudeProfileSwitcher/`. That deletes the profile list, the default profile's custom name, and all Code session backups. The data folders `Claude-<id>` stay on disk, but nothing is linked to them any more, so you can delete them by hand if you no longer need those accounts. Never delete the `Claude` folder unless you want Claude Desktop itself to start over.
+To remove those too, delete that folder. The `Claude-<id>` folders (one per extra profile) stay on disk; delete them by hand only if you no longer need those accounts. Never delete the `Claude` folder.
 
 ## Features
 
