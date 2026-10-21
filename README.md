@@ -24,6 +24,8 @@ Requires macOS 14 or newer (Apple Silicon and Intel).
 4. Open System Settings > Privacy & Security, scroll to the bottom, click **Open Anyway**, and confirm.
 5. Open the app again. The icon appears in the menu bar.
 
+Coming from Keladi Hub (0.1.1 to 0.1.3)? Turn off **Start at login** in the old app, move it to the Trash, and install this one. macOS treats it as a new app, so it asks for permissions again. Your profiles and backups are kept.
+
 Prefer not to trust a prebuilt binary? Build it from source (see Build). Each release page lists the SHA-256 of the DMG.
 
 ## Uninstall
@@ -46,7 +48,7 @@ To remove those too, delete that folder. The `Claude-<id>` folders (one per extr
 - Removing a profile deletes its local data, but its Code session history is saved first, as one backup per Claude account (merged, not replaced).
 - **Restore** puts a saved Code session history back into any profile.
 - **Start at login** is a switch at the bottom of the popup. It is off by default.
-- The popup header shows the version and build id (for example `v0.1.1 (7f3843d)`). Include it in bug reports.
+- The popup header shows the version and build id (for example `v0.1.4 (014197d)`). Include it in bug reports.
 
 ## Why use it
 
