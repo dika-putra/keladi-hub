@@ -58,7 +58,6 @@ struct ContentView: View {
         .focusEffectDisabled()
     }
 
-    // MARK: Header and footer
 
     private var header: some View {
         HStack {
@@ -121,7 +120,6 @@ struct ContentView: View {
         .controlSize(.large)
     }
 
-    // MARK: Rows
 
     @ViewBuilder
     private func row(_ p: Profile) -> some View {
@@ -190,7 +188,6 @@ struct ContentView: View {
             .tint(tint)
     }
 
-    // MARK: Panels
 
     private var addPanel: some View {
         card {
@@ -264,7 +261,6 @@ struct ContentView: View {
         }
     }
 
-    // MARK: Helpers
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8, content: content)
