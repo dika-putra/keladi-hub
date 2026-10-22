@@ -133,6 +133,32 @@ Phase 0 results on macOS, 2026-10-17:
 
 Out of scope (add if needed): a wrapper `.app` per profile with its own Dock icon, a "logged in" status check, history import.
 
+## Handoff: how to continue
+
+Current state: v0.1.4 is released and everything is pushed to `main`. The tree is clean.
+
+Common tasks:
+- Build the app: `./build.sh`, then open `build/Kelawdi Squad.app`. Quit a running copy first (process name `KelawdiSquad`).
+- Build the DMG: `./make-dmg.sh`. Build from a clean git tree so the build id in the popup header is a plain commit hash without `-dirty`.
+- Regenerate icons: `swift assets/make-icons.swift assets captain`, then `iconutil -c icns assets/AppIcon.iconset -o assets/AppIcon.icns` and delete `assets/AppIcon.iconset`. The script writes the iconset and the menu bar PNG; it does not run `iconutil` itself.
+- Regenerate README screenshots after any UI change: build from a clean tree, run `KelawdiSquad --screenshot <dir>` (demo data, real config untouched), copy `popup.png` and `manage.png` to `assets/screenshots/`.
+- Release: bump `CFBundleShortVersionString` in `build.sh`, commit and push, run `./make-dmg.sh`, check the DMG (mount it, `lipo -info` should list arm64 and x86_64), then `gh release create vX.Y.Z <dmg> --target main` with English notes that include the SHA-256 and the "not signed by Apple" instructions.
+
+Things that are easy to get wrong:
+- Never publish a build that was made from a dirty tree.
+- A bundle id change makes macOS treat the app as new: permissions and Start at login are asked again.
+- Show relies on a reopen Apple event. Do not go back to the Accessibility API (see the 2026-10-17 incident).
+- The popup is a custom `NSPanel`. Do not switch it back to `MenuBarExtra` or `NSPopover` (they moved when the content size changed).
+- The config folder is still named `ClaudeProfileSwitcher`, and `profiles.json` may still be in the first plain-array format. Keep reading both.
+- Deleting a profile folder or a backup is permanent. Keep the path checks in `Store.remove`.
+
+Backlog, in rough priority order (all optional, see the decision log for why each is deferred):
+1. Check whether a login item left behind by a deleted app stays listed in Login Items, then update the README.
+2. Restore for scratch-workspace sessions (needs real data to test).
+3. A second AI desktop app: test `open -n -a <app> --args --user-data-dir=<folder>` locally first; only then consider an adapter design.
+4. Windows, in a separate repository, once there is a Windows machine to test on.
+5. Notarization, which needs a Developer ID certificate from the paid Apple Developer Program.
+
 ## Risks and unverified items
 
 - Windows: Claude Desktop may be installed as an MSIX / Store app. The exe path may be unstable and launching with arguments may be restricted. Unverified; check when the Windows version starts.
