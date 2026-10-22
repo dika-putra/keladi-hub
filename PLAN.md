@@ -93,7 +93,7 @@ Decision log:
   - Windows: not started until there is a real need and a Windows machine to test on.
   - Restore for scratch-workspace sessions stays a documented limitation.
   - Notarization: not now. Revisit if several outside users are blocked by the macOS warning.
-  - Start at login: added, default off, through `SMAppService.mainApp` (`LoginItem.swift`). Unverified whether registration works for an ad-hoc signed app; if macOS refuses, the popup shows the error. Test it from the Applications folder.
+  - Start at login: added, default off, through `SMAppService.mainApp` (`LoginItem.swift`). Tested by the author on 2026-10-22: it works for the ad-hoc signed build installed in the Applications folder. If macOS refuses, the popup shows the error.
 - 2026-10-18: the repository is public under the MIT license. Releases ship as a DMG, ad-hoc signed and not notarized (see Distribution).
 
 Structure:
@@ -122,7 +122,7 @@ An attempt to restore minimized windows through the Accessibility API (`AXUIElem
 - Phase 0 (macOS spike): done. Windows is not tested.
 - macOS app: done and released (v0.1.4). Launch, focus, add, rename, remove, restore, make default, backups, and the popup UI are implemented. Tested by the user: launch, focus, add, rename, remove, make default, popup layout and positioning.
 - Not done by decision: restore for scratch-workspace sessions, notarization, the Windows version, support for other AI apps.
-- Added, awaiting a real-world test by the author: Start at login.
+- Start at login: tested by the author, works. Not checked: whether a login item left behind by a deleted app stays listed in Login Items.
 
 Phase 0 results on macOS, 2026-10-17:
 - Proven: the `--user-data-dir` flag works; a new folder starts empty and shows the login screen; a second account signs in separately; the original account stays signed in; the session survives closing and reopening; chat works normally.
